@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Round 1 pairing calculator — FIDE Dutch Swiss system</title>
+<meta name="description" content="Work out your Round 1 Swiss opponent from your starting number and the size of the field. Deterministic under the FIDE Dutch system, with the colour rule explained.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;450;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <a class="mark" href="index.html">Chess tournament tools</a>
+    <nav>
+      <a href="performance-rating-calculator.html">Norm performance</a>
+      <a href="round-1-pairing-calculator.html" aria-current="page">Round 1 pairing</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <h1>Round 1 pairing calculator</h1>
+  <p class="sub">Under the FIDE Dutch system the first round is fully determined by the
+  starting list, so this is a calculation rather than a prediction. Take your starting
+  number and the number of players from the tournament's startlist.</p>
+
+  <section>
+    <div class="row">
+      <div>
+        <label for="players">Players in your section</label>
+        <input id="players" type="number" min="2" max="2000" value="80" inputmode="numeric">
+      </div>
+      <div>
+        <label for="snum">Your starting number</label>
+        <input id="snum" type="number" min="1" max="2000" value="17" inputmode="numeric">
+      </div>
+    </div>
+  </section>
+
+  <section id="out"></section>
+
+  <div class="prose">
+    <h3>How the first round is paired</h3>
+    <p>All players start on zero, so the whole field is a single scoregroup ordered by
+    starting number. The Dutch system splits that group in half: the top half becomes S1,
+    the bottom half S2. The first player of S1 meets the first player of S2, the second
+    meets the second, and so on down the list.</p>
+    <div class="eq">
+      Field of 2<i>n</i> players &nbsp;→&nbsp; <b>1</b> v <b>n+1</b> &nbsp;·&nbsp;
+      <b>2</b> v <b>n+2</b> &nbsp;·&nbsp; … &nbsp;·&nbsp; <b>n</b> v <b>2n</b>
+    </div>
+    <p>With an odd number of players the lowest-ranked player receives the pairing-allocated
+    bye, and the remaining even field is split as above. This is why a field of 81 pairs
+    identically to a field of 80.</p>
+
+    <h3>Why nobody can tell you your colour</h3>
+    <p>Colours in round one are not derived from the ratings. The colour of the highest
+    board is decided by a drawing of lots, and every subsequent S1 player alternates from
+    there. So the pairing is certain but the colours are a coin flip — one that resolves
+    every board at once.</p>
+    <p>That means there are exactly two possible colour assignments for the whole round,
+    not two per board. Once you see any single board's colours, you know your own. The tool
+    above gives you both branches rather than guessing.</p>
+
+    <h3>When this will be wrong</h3>
+    <p>The arithmetic is exact. The assumptions are what break:</p>
+    <ul>
+      <li><b>The entry list changed.</b> A late entry or a no-show shifts every starting
+      number after it. This is the single commonest cause of a wrong answer at weekend
+      opens, and there is no way to detect it in advance.</li>
+      <li><b>The event uses acceleration.</b> Accelerated pairings deliberately break the
+      halving described above, usually in large opens over the first two or three rounds.</li>
+      <li><b>Another pairing system.</b> Dubov, Burstein and Lim are all FIDE-approved and
+      all pair round one differently from the Dutch system.</li>
+      <li><b>Local restrictions.</b> Many organisers ask their software to avoid pairing
+      players from the same club or federation in the early rounds. This is not part of the
+      FIDE system, it is rarely published, and it silently changes several boards.</li>
+    </ul>
+    <p>If your event does any of these, treat the result as a rough guide. If it is an
+    ordinary Dutch-paired Swiss with a settled entry list, the result should match the
+    published pairings exactly.</p>
+  </div>
+
+  <p class="reg">Implements the FIDE (Dutch) System, Handbook C.04.3, for the initial round
+  only. Later rounds depend on results, colour history and float history, and are not
+  calculated here.</p>
+</main>
+
+<footer class="foot"><div class="wrap">
+  <a href="index.html">All tools</a> · Source: <a href="https://handbook.fide.com/">FIDE Handbook</a>
+</div></footer>
+
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+
+/* Round 1 of a Dutch Swiss: single scoregroup, split in half, S1(i) v S2(i).
+   An odd field gives the pairing-allocated bye to the lowest-ranked player. */
+function round1(players, you){
+  if(!Number.isInteger(players) || players < 2) return {error:"Enter at least 2 players."};
+  if(!Number.isInteger(you) || you < 1 || you > players)
+    return {error:`Your starting number must be between 1 and ${players}.`};
+
+  const odd = players % 2 === 1;
+  const field = odd ? players - 1 : players;
+  const half = field / 2;
+
+  if(odd && you === players) return {bye:true, players, boards:half};
+
+  const inS1 = you <= half;
+  const board = inS1 ? you : you - half;
+  const opponent = inS1 ? you + half : you - half;
+  // Board 1's S1 player takes the drawn colour; S1 alternates down the list.
+  const s1White = board % 2 === 1;
+  return {players, half, board, opponent, inS1, boards:half,
+          colourIfLotWhite: (inS1 === s1White) ? "White" : "Black"};
+}
+
+function table(players, you){
+  const odd = players % 2 === 1, field = odd ? players - 1 : players, half = field / 2;
+  let rows = "";
+  for(let b = 1; b <= half; b++){
+    const a = b, z = b + half, mine = you === a || you === z;
+    // Odd boards: S1 has the drawn colour, so S1 is listed first.
+    const [l, r] = b % 2 === 1 ? [a, z] : [z, a];
+    rows += `<tr class="${mine?"you":""}"><td>${b}</td><td>${l}</td><td>${r}</td></tr>`;
+  }
+  if(odd) rows += `<tr class="${you===players?"you":""}"><td>—</td><td>${players}</td>
+    <td style="text-align:left">bye</td></tr>`;
+  return `<table><thead><tr><th>Bd</th><th>Drawn colour</th><th>Other colour</th></tr></thead>
+    <tbody>${rows}</tbody></table>`;
+}
+
+function render(){
+  const players = Number($("players").value), you = Number($("snum").value);
+  const r = round1(players, you);
+  const box = $("out");
+
+  if(r.error){ box.innerHTML = `<div class="note warn">${r.error}</div>`; return; }
+
+  if(r.bye){
+    box.innerHTML = `<h2>Your first round</h2>
+      <div class="ladder"><div class="rung">
+        <span class="res">Bye</span>
+        <span class="rp" style="font-size:1.05rem;font-weight:500;min-width:0">No game</span>
+        <span class="verdict">lowest starting number in an odd field</span></div></div>
+      <div class="note plain">As the lowest-ranked player in a field of ${r.players} you
+      receive the pairing-allocated bye. If you are chasing a norm, note that a
+      pairing-allocated bye is treated differently from a bye you requested — see the
+      <a href="performance-rating-calculator.html">norm calculator</a>.</div>`;
+    return;
+  }
+
+  const other = r.colourIfLotWhite === "White" ? "Black" : "White";
+  box.innerHTML = `<h2>Your first round</h2>
+    <div class="ladder">
+      <div class="rung hit">
+        <span class="res">Board</span>
+        <span class="rp">${r.board}</span>
+        <span class="verdict">of ${r.boards} boards</span></div>
+      <div class="rung hit">
+        <span class="res">You play</span>
+        <span class="rp">${r.opponent}</span>
+        <span class="verdict">starting number ${r.opponent}, the
+          ${r.inS1 ? "player paired up from the bottom half" : "player you are paired up to"}</span></div>
+    </div>
+    <div class="note plain"><b>Colour depends on the drawing of lots.</b> If the higher-ranked
+    player on board 1 is given White, you have ${r.colourIfLotWhite}. If board 1 goes the
+    other way, you have ${other}. Every board flips together, so one glance at any pairing
+    settles yours.</div>
+    <details><summary>Show the full round</summary>
+      <p class="empty" style="margin:.7rem 0 .5rem;font-size:.82rem">By starting number. The
+      first column has whichever colour is drawn for board 1.</p>
+      ${table(players, you)}</details>`;
+}
+
+$("players").addEventListener("input", render);
+$("snum").addEventListener("input", render);
+render();
+</script>
+</body>
+</html>
