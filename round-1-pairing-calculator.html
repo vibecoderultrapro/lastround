@@ -39,7 +39,7 @@
       </div>
       <div>
         <label for="snum">Your starting number</label>
-        <input id="snum" type="number" min="1" max="2000" value="17" inputmode="numeric">
+        <input id="snum" type="number" min="1" max="2000" value="57" inputmode="numeric">
       </div>
     </div>
   </section>
@@ -96,6 +96,8 @@
 <footer class="foot"><div class="wrap">
   <a href="index.html">Both calculators</a> · Source:
   <a href="https://handbook.fide.com/">FIDE Handbook</a>
+
+  <span class="build">build 2026-09-19 · 5</span>
 </div></footer>
 
 <script>
@@ -139,6 +141,12 @@ function table(players, you){
     <tbody>${rows}</tbody></table>`;
 }
 
+const ord = n => {
+  const t = n % 100;
+  if(t >= 11 && t <= 13) return "th";
+  return {1:"st", 2:"nd", 3:"rd"}[n % 10] || "th";
+};
+
 function render(){
   const players = Number($("players").value), you = Number($("snum").value);
   const r = round1(players, you);
@@ -161,16 +169,16 @@ function render(){
 
   const other = r.colourIfLotWhite === "White" ? "Black" : "White";
   box.innerHTML = `<h2>Your first round</h2>
-    <div class="ladder">
+    <div class="ladder wide">
       <div class="rung lead hit">
-        <span class="res">Board</span>
-        <span class="rp">${r.board}</span>
-        <span class="verdict">of ${r.boards} boards</span></div>
-      <div class="rung lead hit">
-        <span class="res">Plays</span>
+        <span class="res">You play</span>
         <span class="rp">${r.opponent}</span>
-        <span class="verdict">${r.inS1 ? "paired up from the bottom half"
-          : "paired down from the top half"}</span></div>
+        <span class="verdict">${r.board}${ord(r.board)} player in the
+          ${r.inS1 ? "bottom" : "top"} half of the startlist</span></div>
+      <div class="rung hit">
+        <span class="res">Board</span>
+        <span class="rp" style="font-size:1.45rem">${r.board}</span>
+        <span class="verdict">of ${r.boards}</span></div>
     </div>
     <div class="note plain"><b>Colour depends on the drawing of lots.</b> If the higher-ranked
     player on board 1 is given White, you have ${r.colourIfLotWhite}. If board 1 goes the
