@@ -32,6 +32,9 @@
     most calculators go wrong.</p>
   </div>
 
+  <div class="tool">
+  <div class="tool-in">
+
   <section>
     <div class="step"><span class="n">1</span><h2>What are you chasing?</h2></div>
     <div class="row">
@@ -47,6 +50,11 @@
       <div>
         <label for="rounds">Rounds in the event</label>
         <input id="rounds" type="number" min="1" max="19" value="9" inputmode="numeric">
+      </div>
+      <div>
+        <label for="ownfed">Your federation</label>
+        <input id="ownfed" type="text" maxlength="3" placeholder="e.g. IND"
+          autocapitalize="characters" spellcheck="false">
       </div>
     </div>
   </section>
@@ -161,6 +169,10 @@
     <div id="games-notes"></div>
   </section>
 
+  </div>
+
+  <aside class="tool-out">
+
   <section id="lastround" hidden>
     <div class="step"><span class="n">3</span><h2>What the last round needs</h2></div>
     <div style="margin-bottom:1rem">
@@ -174,6 +186,11 @@
   </section>
 
   <section id="out" hidden></section>
+
+  <section id="reqs" hidden></section>
+
+  </aside>
+  </div>
 
   <div class="prose">
     <h3>How the performance rating is calculated</h3>
@@ -364,6 +381,75 @@ function subsets(games, title, min){
 }
 
 /* =========================================================================
+   The rest of the norm conditions — B.01 §1.4.3 to §1.4.5, with the per-round
+   numbers taken from the Annex (single-round events).
+
+   These are counted over DISTINCT opponents: 1.4.5 says an opponent's title is
+   counted only once.
+   ========================================================================= */
+
+/* mo = opponents holding a title in the relevant band
+   th = opponents holding any title except CM/WCM (1.4.5a)
+   otherFeds / maxOneFed / maxOwnFed = 1.4.3, 1.4.4.  null = not applicable. */
+const REQS = {
+  7:  {mo:3, th:4, otherFeds:null, maxOneFed:null, maxOwnFed:null},
+  8:  {mo:3, th:4, otherFeds:null, maxOneFed:null, maxOwnFed:null},
+  9:  {mo:3, th:5, otherFeds:2, maxOneFed:6, maxOwnFed:5},
+  10: {mo:4, th:5, otherFeds:2, maxOneFed:6, maxOwnFed:6},
+  11: {mo:4, th:6, otherFeds:2, maxOneFed:7, maxOwnFed:6},
+  12: {mo:4, th:6, otherFeds:2, maxOneFed:8, maxOwnFed:7},
+  13: {mo:5, th:7, otherFeds:2, maxOneFed:8, maxOwnFed:7}
+};
+
+/* 1.4.5a — title-holders, explicitly excluding CM and WCM. */
+const TH_TITLES = new Set(["GM","IM","FM","WGM","WIM","WFM"]);
+/* 1.4.5b-e — the band that must supply the minimum number of opponents. */
+const MO_BAND = {
+  GM:  new Set(["GM"]),
+  IM:  new Set(["IM","GM"]),
+  WGM: new Set(["WGM","IM","GM"]),
+  WIM: new Set(["WIM","WGM","IM","GM"])
+};
+
+/* expected = how many games the norm will finally rest on. Mid-tournament that
+   is the scheduled count, not the games played so far, or the federation limits
+   would read as "not applicable" right up until the last round. */
+function requirements(games, title, ownFed, expected){
+  const counted = games.filter(g => g.counts);
+  if(!counted.length) return null;
+
+  /* Distinct opponents: same name and rating is the same person. */
+  const seen = new Set(), opp = [];
+  for(const g of counted){
+    const key = (g.name || "") + "|" + (g.rating ?? "u");
+    if(seen.has(key)) continue;
+    seen.add(key); opp.push(g);
+  }
+
+  const n = Math.max(counted.length, expected || 0);
+  const req = REQS[Math.min(13, Math.max(7, n))];
+  const own = (ownFed || "").trim().toUpperCase();
+
+  const th = opp.filter(g => TH_TITLES.has(g.title)).length;
+  const mo = opp.filter(g => MO_BAND[title].has(g.title)).length;
+
+  const feds = opp.map(g => g.fed).filter(Boolean);
+  const tally = {};
+  for(const f of feds) tally[f] = (tally[f] || 0) + 1;
+  const maxOneFed = Object.values(tally).length ? Math.max(...Object.values(tally)) : 0;
+  const ownCount = own ? (tally[own] || 0) : null;
+  const otherFeds = own
+    ? new Set(feds.filter(f => f !== own)).size
+    : new Set(feds).size;
+
+  const haveTitles = opp.some(g => g.title);
+  const haveFeds = feds.length > 0;
+
+  return {n, played: counted.length, req, th, mo, maxOneFed, ownCount, otherFeds, own,
+          haveTitles, haveFeds, distinct: opp.length};
+}
+
+/* =========================================================================
    Chess-Results player-card parser.
 
    A record spans MULTIPLE LINES. The Res. column sits on its own line and the
@@ -378,7 +464,8 @@ function subsets(games, title, min){
    line instead picks up the opponent's Pts. and silently inverts results.
    ========================================================================= */
 
-const NOT_FED = new Set(["GM","IM","FM","CM","NM","WGM","WIM","WFM","WCM","WNM","PGN"]);
+const TITLE_CODES = new Set(["GM","IM","FM","CM","NM","WGM","WIM","WFM","WCM","WNM"]);
+const NOT_FED = new Set([...TITLE_CODES, "PGN"]);
 
 const RESULTS = {
   "1":{r:1,counts:true}, "0":{r:0,counts:true},
@@ -437,13 +524,21 @@ function parseCard(text){
 
     const rtg = Number(rec.tokens[fed-1]);
     const res = RESULTS[String(rec.tokens[fed+2] ?? "").toLowerCase()];
-    const name = rec.tokens.slice(1, fed-1).find(t => /[a-z]/.test(t) && t.length > 3) || "";
+    const before = rec.tokens.slice(1, fed-1);
+    const name = before.find(t => /[a-z]/.test(t) && t.length > 3) || "";
+    /* The title cell sits just before the name and is empty for untitled players. */
+    const title = before.find(t => TITLE_CODES.has(t)) || "";
+    const fedCode = rec.tokens[fed];
 
     /* No valid result token means the game has not been played. Never guess. */
-    if(!res){ pending.push({round:rec.round, rating:rtg === 0 ? null : rtg, name}); continue; }
+    if(!res){
+      pending.push({round:rec.round, rating:rtg === 0 ? null : rtg, name, title, fed:fedCode});
+      continue;
+    }
 
     games.push({round:rec.round, rating: rtg === 0 ? null : rtg,
-                result:res.r, counts:res.counts, kind:res.kind || "played", name});
+                result:res.r, counts:res.counts, kind:res.kind || "played",
+                name, title, fed:fedCode});
   }
 
   const rounds = records.length ? Math.max(...records.map(r => r.round)) : 0;
@@ -490,7 +585,8 @@ function renderGames(){
           value="${g.rating ?? ""}" data-f="rating" data-i="${i}"
           aria-label="Round ${g.round ?? i+1} opponent rating"
           ${noOpponent(g) ? "disabled" : ""}>
-        ${g.name ? `<div class="oname">${esc(g.name)}</div>` : ""}
+        ${g.name ? `<div class="oname">${g.title ? `<b>${esc(g.title)}</b> ` : ""}${
+          g.fed ? `${esc(g.fed)} · ` : ""}${esc(g.name)}</div>` : ""}
       </td>
       <td><select data-f="value" data-i="${i}" aria-label="Round ${g.round ?? i+1} result">
         ${OPTIONS.map(([v,l]) =>
@@ -506,7 +602,8 @@ function compute(){
   const counted = games.filter(g => g.counts);
 
   if(!counted.length){
-    $("out").hidden = true; $("lastround").hidden = true; $("games-notes").innerHTML = "";
+    $("out").hidden = true; $("lastround").hidden = true;
+    $("reqs").hidden = true; $("games-notes").innerHTML = "";
     return;
   }
 
@@ -614,6 +711,65 @@ function compute(){
 
   $("out").hidden = false;
   $("out").innerHTML = html.join("");
+
+  /* --- everything a norm needs beyond the performance rating --- */
+  const rq = requirements(games, title, $("ownfed").value,
+                          Math.min(rounds, 13));
+  const rows = [];
+  const row = (pass, what, num) => rows.push(
+    `<li class="${pass === null ? "unk" : pass ? "ok" : "bad"}">
+       <span class="m">${pass === null ? "?" : pass ? "✓" : "✕"}</span>
+       <span class="what">${what}</span><span class="num">${num}</span></li>`);
+
+  row(now.meetsRp, `Performance rating`, `${now.rp} / ${t.threshold}`);
+  row(now.meetsRa, `Opponent average`, `${now.ra} / ${t.minRa}`);
+  row(now.meetsScore, `Score at least 35%`, `${now.p}%`);
+  row(counted.length >= mg.min, `Games played`, `${counted.length} / ${mg.min}`);
+
+  if(rq.haveTitles){
+    row(rq.th >= rq.req.th, `Titled opponents <span class="qn">(not CM/WCM)</span>`,
+        `${rq.th} / ${rq.req.th}`);
+    const band = {GM:"GMs", IM:"IMs or GMs", WGM:"WGMs, IMs or GMs",
+                  WIM:"WIMs, WGMs, IMs or GMs"}[title];
+    row(rq.mo >= rq.req.mo, `Opponents who are ${band}`, `${rq.mo} / ${rq.req.mo}`);
+  } else {
+    row(null, `Titled opponents`, `paste your card`);
+    row(null, `Opponents in the title band`, `paste your card`);
+  }
+
+  if(rq.req.otherFeds === null){
+    row(null, `Federation limits`, `n/a at ${rq.n} games`);
+  } else if(!rq.haveFeds){
+    row(null, `Federation mix`, `paste your card`);
+  } else if(!rq.own){
+    row(null, `Federation mix`, `enter your federation`);
+  } else {
+    row(rq.otherFeds >= rq.req.otherFeds, `Federations other than ${rq.own}`,
+        `${rq.otherFeds} / ${rq.req.otherFeds}`);
+    row(rq.ownCount <= rq.req.maxOwnFed, `Opponents from ${rq.own}`,
+        `${rq.ownCount} / max ${rq.req.maxOwnFed}`);
+    row(rq.maxOneFed <= rq.req.maxOneFed, `Most from any one federation`,
+        `${rq.maxOneFed} / max ${rq.req.maxOneFed}`);
+  }
+
+  const unmet = rows.filter(r => r.includes('class="bad"')).length;
+  const unknown = rows.filter(r => r.includes('class="unk"')).length;
+  const verdict = unmet === 0 && unknown === 0
+    ? `Every condition this tool can check is met.`
+    : unmet === 0
+      ? `Nothing failing, but ${unknown} condition${unknown>1?"s":""} can't be checked from what you have entered.`
+      : `${unmet} condition${unmet>1?"s":""} not met yet.`;
+
+  $("reqs").hidden = false;
+  const basis = rq.played < rq.n
+    ? `${title} norm over ${rq.n} games · ${rq.played} played so far`
+    : `${title} norm over ${rq.n} games`;
+  $("reqs").innerHTML = `<h2>Norm requirements
+      <span class="quiet">— ${basis}</span></h2>
+    <ul class="reqlist">${rows.join("")}</ul>
+    <div class="note plain">${verdict} These are articles 1.4.1 to 1.4.8 of the Title
+      Regulations. A norm also needs a signed arbiter's certificate, and the arbiter's
+      reading is the one that counts.</div>`;
 }
 
 /* =========================================================================
@@ -667,27 +823,45 @@ function loadPaste(){
 $("do-parse").onclick = loadPaste;
 
 const EXAMPLE = [
-  "1\t32\t66\tFM\tBognar, Csaba Dr.\t2044\tHUN\t0\t", "1", "0,84\t10\t1,60\tPGN",
-  "2\t5\t11\tFM\tPalczert, Matyas\t2446\tHUN\t5\t", "1", "0,33\t10\t6,70\tPGN",
-  "3\t2\t3\tIM\tAjay, Santhosh Parvathareddy\t2477\tIND\t6\t", "½", "0,29\t10\t2,10\tPGN",
-  "4\t5\t17\tGM\tGretarsson, Helgi Ass\t2420\tISL\t3,5\t", "1", "0,37\t10\t6,30\tPGN",
-  "5\t1\t2\tIM\tMd, Imran\t2492\tIND\t5,5\t", "½", "0,28\t10\t2,20\tPGN",
-  "6\t2\t13\tIM\tApoorv, Kamble\t2435\tIND\t5,5\t", "0", "0,35\t10\t-3,50\tPGN",
-  "7\t6\t16\tIM\tGschnitzer, Adrian\t2421\tGER\t4,5\t", "1", "0,37\t10\t6,30\tPGN",
-  "8\t4\t9\tGM\tAczel, Gergely\t2448\tHUN\t5\t", "½", "0,33\t10\t1,70\tPGN",
-  "9\t3\t4\tGM\tSivuk, Vitaly\t2476\tSWE\t5,5\t"
+  "1\t28\t41\tIM\tVarga, Bence\t2420\tHUN\t5,5\t",
+  "1",
+  "0,50\t10\t5,00\tPGN",
+  "2\t9\t6\tGM\tKeller, Jonas\t2455\tGER\t6\t",
+  "0",
+  "0,47\t10\t-4,70\tPGN",
+  "3\t15\t22\tIM\tNair, Rohan\t2380\tIND\t5\t",
+  "½",
+  "0,55\t10\t-0,50\tPGN",
+  "4\t12\t18\tFM\tIyer, Karthik\t2401\tIND\t4,5\t",
+  "1",
+  "0,51\t10\t4,90\tPGN",
+  "5\t21\t55\t\tBalogh, Tamas\t2015\tHUN\t3,5\t",
+  "1",
+  "0,92\t10\t0,80\tPGN",
+  "6\t11\t27\tIM\tPetrovic, Milan\t2390\tSRB\t5\t",
+  "½",
+  "0,54\t10\t-0,40\tPGN",
+  "7\t6\t11\tGM\tKovalenko, Yuri\t2440\tUKR\t5,5\t",
+  "0",
+  "0,48\t10\t-4,80\tPGN",
+  "8\t17\t31\tFM\tMenon, Adithya\t2375\tIND\t4,5\t",
+  "1",
+  "0,56\t10\t4,40\tPGN",
+  "9\t10\t14\tIM\tNavarro, Sergio\t2400\tESP\t5\t"
 ].join("\n");
 
 $("do-example").onclick = () => {
   $("paste").value = EXAMPLE;
   $("title").value = "IM";
+  $("ownfed").value = "IND";
   loadPaste();
 };
 
 $("do-clear").onclick = () => {
   games = []; $("paste").value = ""; $("parse-msg").innerHTML = "";
   $("opp").value = ""; $("opp-name").textContent = "";
-  $("games-section").hidden = true; $("out").hidden = true; $("lastround").hidden = true;
+  $("games-section").hidden = true; $("out").hidden = true;
+  $("lastround").hidden = true; $("reqs").hidden = true;
 };
 
 $("add-row").onclick = () => {
@@ -716,6 +890,7 @@ $("games").addEventListener("click", e => {
 });
 
 $("opp").addEventListener("input", compute);
+$("ownfed").addEventListener("input", compute);
 $("title").onchange = compute;
 $("rounds").oninput = compute;
 </script>
