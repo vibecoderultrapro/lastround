@@ -53,10 +53,15 @@
     </div>
 
     <div id="pane-paste">
-      <label for="paste">Copy the game table from your Chess-Results player card and paste it here</label>
-      <textarea id="paste" spellcheck="false" placeholder="1	12	34	IM	Novak, Petra	2401	SVK	5,5	1
-2	6	11	GM	Andersson, Lars	2455	SWE	6	0
-3	9	22		Haile, Yonas	2380	ETH	5	½"></textarea>
+      <label for="paste">Open your player card on Chess-Results, select the whole game table
+      and paste it here</label>
+      <textarea id="paste" spellcheck="false" placeholder="Rd.	Bo.	SNo		Name	Rtg	FED	Pts.	Res.	we	K	rtg+/-	PGN
+1	32	66	FM	Bognar, Csaba Dr.	2044	HUN	0
+1
+0,84	10	1,60	PGN
+2	5	11	FM	Palczert, Matyas	2446	HUN	5
+1
+0,33	10	6,70	PGN"></textarea>
       <div class="row" style="margin-top:.7rem">
         <button id="do-parse" style="flex:0 0 auto">Read games</button>
         <button id="do-clear" class="ghost" style="flex:0 0 auto">Clear</button>
@@ -73,11 +78,25 @@
 
   <section id="games-section" hidden>
     <h2>Your games</h2>
+    <p class="empty" style="margin:-.35rem 0 .7rem;font-size:.82rem">Check these against your
+    card. Anything the parser misread can be corrected here.</p>
     <table>
-      <thead><tr><th>Rd</th><th>Opponent rating</th><th>Result</th><th></th></tr></thead>
+      <thead><tr><th>Rd</th><th>Opponent</th><th>Result</th><th></th></tr></thead>
       <tbody id="games"></tbody>
     </table>
     <div id="games-notes"></div>
+  </section>
+
+  <section id="lastround" hidden>
+    <h2>Last round</h2>
+    <div style="margin-bottom:.9rem">
+      <label for="opp">Opponent's rating, if the pairing is out</label>
+      <input id="opp" type="number" inputmode="numeric" placeholder="leave blank if unknown"
+        style="max-width:14rem">
+      <div id="opp-name" class="empty" style="font-size:.8rem;margin-top:.3rem"></div>
+    </div>
+    <div id="ladder"></div>
+    <div id="ladder-note"></div>
   </section>
 
   <section id="out" hidden></section>
@@ -111,6 +130,9 @@
     <p>It also means an opponent below the floor is a cliff rather than a slope. For an IM
     norm, a 1600 and a 2040 contribute exactly the same to your average, provided they are
     your lowest. Beyond that point a weaker opponent costs you nothing at all.</p>
+    <p>One weak opponent early can still quietly end a norm hunt. Because the floor is the
+    same for everybody, a single game against a 2050 in a field of 2450s pulls your average
+    down by around forty points over nine rounds, and no later result can undo it.</p>
 
     <h3>Why this disagrees with Chess-Results</h3>
     <p>Chess-Results shows a performance rating computed under the FIDE <em>Rating</em>
@@ -165,7 +187,10 @@
 <script>
 "use strict";
 
-/* ---------- engine (B.01 §1.4.1, §1.4.6–1.4.9) ---------- */
+/* =========================================================================
+   Calculation engine — FIDE Title Regulations B.01 (1 January 2024),
+   articles 1.4.1 and 1.4.6 to 1.4.9.
+   ========================================================================= */
 
 const TITLES = {
   GM:{floor:2200,threshold:2600,minRa:2380},
@@ -175,6 +200,7 @@ const TITLES = {
 };
 const UNRATED = 1400, MIN_SCORE = 0.35, MIN_GAMES = 9;
 
+/* 1.4.9 conversion table, indexed by whole-number percentage 0..100. */
 const DP = [
  -800,-677,-589,-538,-501,-470,-444,-422,-401,-383,
  -366,-351,-336,-322,-309,-296,-284,-273,-262,-251,
@@ -187,10 +213,11 @@ const DP = [
   240, 251, 262, 273, 284, 296, 309, 322, 336, 351,
   366, 383, 401, 422, 444, 470, 501, 538, 589, 677, 800];
 
-const half = x => Math.floor(x + 0.5);
+const half = x => Math.floor(x + 0.5);          /* 1.4.7b, 1.4.9: .5 rounds up */
 const pct  = (s,n) => half(s / n * 100);
 
-/* 1.4.6b-d: deem unrated 1400, then raise AT MOST ONE - the lowest - to the floor. */
+/* 1.4.6b-d. Deem unrated opponents 1400, then raise AT MOST ONE — the lowest
+   rated — to the title's floor. Mandatory, not an optimisation. */
 function adjust(ratings, floor){
   const v = ratings.map(r => r === null ? UNRATED : r);
   if(!v.length) return {values:v,sum:0,raisedIndex:null,raisedFrom:null};
@@ -214,7 +241,8 @@ function perf(games, title){
     ok: rp >= t.threshold && ra >= t.minRa && score / n >= MIN_SCORE};
 }
 
-/* 1.4.1c - a forfeit WIN or a pairing-allocated bye drops the 9-game minimum to 8. */
+/* 1.4.1c — a forfeit WIN or a pairing-allocated bye drops the 9-game minimum
+   to 8. A bye the player requested does not. */
 function minGames(games, rounds){
   const counted = games.filter(g => g.counts).length;
   if(rounds !== 9 || counted !== 8) return {min:MIN_GAMES, relief:false};
@@ -223,7 +251,8 @@ function minGames(games, rounds){
   return {min:MIN_GAMES, relief:false};
 }
 
-/* Ra is a non-decreasing step function of the next opponent's rating: binary search. */
+/* Ra is a non-decreasing step function of the next opponent's rating — flat
+   below the floor — so binary search the boundary rather than inverting. */
 function requiredRating(played, title, result){
   const q = r => { const p = perf([...played,{rating:r,result,counts:true}], title); return p && p.ok; };
   if(!q(3000)) return null;
@@ -232,7 +261,8 @@ function requiredRating(played, title, result){
   return lo;
 }
 
-/* 1.4.1e (drop trailing games once banked) and 1.4.1f (drop games you won). */
+/* 1.4.1e (ignore games played after the result was banked) and 1.4.1f (ignore
+   games against opponents you defeated). Deduplicated by game set. */
 function subsets(games, title, min){
   const c = games.map((g,i)=>({g,i})).filter(x => x.g.counts);
   const seen = new Map();
@@ -259,88 +289,157 @@ function subsets(games, title, min){
   return [...seen.values()];
 }
 
-/* ---------- paste parser ---------- */
+/* =========================================================================
+   Chess-Results player-card parser.
+
+   A record spans MULTIPLE LINES. The Res. column sits on its own line and the
+   rating columns (we / K / rtg+/- / PGN) follow on a third:
+
+     1  32  66  FM  Bognar, Csaba Dr.  2044  HUN  0
+     1
+     0,84  10  1,60  PGN
+
+   So records are framed by round number, then the FED column is used as an
+   anchor to locate Rtg / Pts. / Res. by POSITION. Reading the last token of a
+   line instead picks up the opponent's Pts. and silently inverts results.
+   ========================================================================= */
+
+const NOT_FED = new Set(["GM","IM","FM","CM","NM","WGM","WIM","WFM","WCM","WNM","PGN"]);
 
 const RESULTS = {
-  "1":{r:1,counts:true},"0":{r:0,counts:true},
-  "½":{r:.5,counts:true},"0.5":{r:.5,counts:true},"0,5":{r:.5,counts:true},
-  "+":{r:1,counts:false,kind:"forfeit-win"},"-":{r:0,counts:false,kind:"forfeit-loss"},
-  "1u":{r:1,counts:false,kind:"forfeit-win"},"0u":{r:0,counts:false,kind:"forfeit-loss"}
+  "1":{r:1,counts:true}, "0":{r:0,counts:true},
+  "½":{r:.5,counts:true}, "0.5":{r:.5,counts:true}, "0,5":{r:.5,counts:true},
+  "+":{r:1,counts:false,kind:"forfeit-win"}, "-":{r:0,counts:false,kind:"forfeit-loss"},
+  "1u":{r:1,counts:false,kind:"forfeit-win"}, "0u":{r:0,counts:false,kind:"forfeit-loss"}
 };
 
-function parseCard(text){
-  const out = [], skipped = [];
-  for(const raw of text.split(/\r?\n/)){
-    const line = raw.trim();
-    if(!line) continue;
-    if(/^(rd|bo|round|sno|no\b)/i.test(line) && !/\d{3,4}/.test(line)) continue;
+const fields = line =>
+  (line.includes("\t") ? line.split("\t") : line.split(/\s{2,}/))
+    .map(s => s.trim()).filter(Boolean);
 
-    if(/not\s*paired|bye|spielfrei/i.test(line)){
-      const pts = line.match(/(½|0[.,]5|1|0)\s*$/);
-      const v = pts ? (pts[1] === "½" || /0[.,]5/.test(pts[1]) ? .5 : Number(pts[1])) : .5;
-      /* A pairing-allocated bye goes to the bottom of the lowest scoregroup, which is not
-         where a norm chaser sits. A half point almost always means a requested bye. */
-      out.push({rating:null, result:v, counts:false, kind: v === 1 ? "pab" : "requested-bye"});
+function parseCard(text){
+  const records = [];
+  let cur = null;
+  for(const raw of text.replace(/ /g," ").split(/\r?\n/)){
+    if(!raw.trim()) continue;
+    const f = fields(raw);
+    if(!f.length) continue;
+    /* A bye row collapses to very few fields once empty cells are dropped, so
+       it is allowed to start a record on its own; everything else needs the
+       full column set, which keeps we / K / rtg+/- continuation lines out. */
+    const looksLikeBye = /not\s*paired|\bbye\b|spielfrei/i.test(raw);
+    if(/^\d{1,2}$/.test(f[0]) && (f.length >= 4 || looksLikeBye)){
+      cur = {round:Number(f[0]), tokens:f.slice()};
+      records.push(cur);
+    } else if(cur){
+      cur.tokens.push(...f);
+    }
+  }
+
+  const games = [], skipped = [], pending = [];
+
+  for(const rec of records){
+    const joined = rec.tokens.join(" ");
+
+    if(/not\s*paired|^\s*bye\b|spielfrei/i.test(joined)){
+      const m = joined.match(/(½|0[.,]5|1|0)\s*$/);
+      const v = m ? (m[1] === "½" || /0[.,]5/.test(m[1]) ? .5 : Number(m[1])) : .5;
+      /* A pairing-allocated bye goes to the bottom of the lowest scoregroup,
+         which is not where a norm chaser sits, so a half point is a requested
+         bye in almost every real case. Editable below either way. */
+      games.push({round:rec.round, rating:null, result:v, counts:false,
+                  kind: v === 1 ? "pab" : "requested-bye", name:"(bye)"});
       continue;
     }
 
-    const tokens = line.split(/\t|\s{2,}/).map(t => t.trim()).filter(Boolean);
-    const flat = tokens.length > 2 ? tokens : line.split(/\s+/);
-    const res = RESULTS[flat[flat.length - 1].toLowerCase()];
-    if(!res){ skipped.push(line); continue; }
-
-    let rating;
-    for(let i = flat.length - 2; i >= 0; i--){
-      const n = Number(flat[i].replace(/[^\d]/g,""));
-      if(flat[i] === "0"){ rating = null; break; }
-      if(n >= 1000 && n <= 3000){ rating = n; break; }
+    let fed = -1;
+    for(let i = 1; i < rec.tokens.length; i++){
+      const t = rec.tokens[i];
+      if(/^[A-Z]{3}$/.test(t) && !NOT_FED.has(t) && /^\d{1,4}$/.test(rec.tokens[i-1])){
+        fed = i; break;
+      }
     }
-    if(rating === undefined){ skipped.push(line); continue; }
-    out.push({rating, result:res.r, counts:res.counts, kind:res.kind || "played"});
+    if(fed === -1){ skipped.push(joined); continue; }
+
+    const rtg = Number(rec.tokens[fed-1]);
+    const res = RESULTS[String(rec.tokens[fed+2] ?? "").toLowerCase()];
+    const name = rec.tokens.slice(1, fed-1).find(t => /[a-z]/.test(t) && t.length > 3) || "";
+
+    /* No valid result token means the game has not been played. Never guess. */
+    if(!res){ pending.push({round:rec.round, rating:rtg === 0 ? null : rtg, name}); continue; }
+
+    games.push({round:rec.round, rating: rtg === 0 ? null : rtg,
+                result:res.r, counts:res.counts, kind:res.kind || "played", name});
   }
-  return {games:out, skipped};
+
+  const rounds = records.length ? Math.max(...records.map(r => r.round)) : 0;
+  return {games, skipped, pending, rounds};
 }
 
-/* ---------- state + rendering ---------- */
+/* =========================================================================
+   State and rendering
+   ========================================================================= */
 
 let games = [];
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 
-const KINDS = [["played","Played"],["requested-bye","Bye (requested)"],
-  ["pab","Bye (pairing-allocated)"],["forfeit-win","Forfeit win"],["forfeit-loss","Forfeit loss"]];
+/* One control per game: result and special kind share a dropdown. */
+const OPTIONS = [
+  ["1","Win"], ["0.5","Draw"], ["0","Loss"],
+  ["requested-bye","Bye (requested)"], ["pab","Bye (allocated)"],
+  ["forfeit-win","Forfeit win"], ["forfeit-loss","Forfeit loss"]
+];
+
+const valueOf = g => g.counts ? String(g.result) : g.kind;
+
+function applyValue(g, v){
+  if(v === "1" || v === "0.5" || v === "0"){
+    g.counts = true; g.kind = "played"; g.result = Number(v);
+  } else {
+    g.counts = false; g.kind = v;
+    if(v === "forfeit-win" || v === "pab") g.result = 1;
+    else if(v === "forfeit-loss") g.result = 0;
+    else g.result = .5;
+    if(v === "requested-bye" || v === "pab") g.rating = null;
+  }
+}
 
 function renderGames(){
   $("games-section").hidden = games.length === 0;
+  const noOpponent = g => !g.counts && (g.kind === "requested-bye" || g.kind === "pab");
   $("games").innerHTML = games.map((g,i) => `
     <tr class="${g.counts ? "" : "excluded"}">
-      <td>${i+1}</td>
-      <td><input type="number" inputmode="numeric" placeholder="unrated"
-           value="${g.rating ?? ""}" data-f="rating" data-i="${i}"
-           aria-label="Round ${i+1} opponent rating" ${g.counts ? "" : "disabled"}></td>
-      <td><select data-f="kind" data-i="${i}" aria-label="Round ${i+1} type">
-        ${KINDS.map(([v,l]) => `<option value="${v}"${g.kind===v?" selected":""}>${l}</option>`).join("")}
+      <td>${g.round ?? i+1}</td>
+      <td>
+        <input type="number" inputmode="numeric" placeholder="unrated"
+          value="${g.rating ?? ""}" data-f="rating" data-i="${i}"
+          aria-label="Round ${g.round ?? i+1} opponent rating"
+          ${noOpponent(g) ? "disabled" : ""}>
+        ${g.name ? `<div class="oname">${esc(g.name)}</div>` : ""}
+      </td>
+      <td><select data-f="value" data-i="${i}" aria-label="Round ${g.round ?? i+1} result">
+        ${OPTIONS.map(([v,l]) =>
+          `<option value="${v}"${valueOf(g)===v?" selected":""}>${l}</option>`).join("")}
       </select></td>
-      <td><button class="tiny" data-del="${i}" aria-label="Remove round ${i+1}">×</button></td>
-    </tr>
-    ${g.counts ? `<tr><td></td><td colspan="3" style="padding-top:0">
-      <select data-f="result" data-i="${i}" aria-label="Round ${i+1} result" style="max-width:9rem">
-        <option value="1"${g.result===1?" selected":""}>Win</option>
-        <option value="0.5"${g.result===.5?" selected":""}>Draw</option>
-        <option value="0"${g.result===0?" selected":""}>Loss</option>
-      </select></td></tr>` : ""}`).join("");
+      <td><button class="tiny" data-del="${i}" aria-label="Remove round ${g.round ?? i+1}">×</button></td>
+    </tr>`).join("");
   compute();
 }
 
 function compute(){
   const title = $("title").value, rounds = Number($("rounds").value) || 9;
-  const box = $("out"), counted = games.filter(g => g.counts);
-  if(!counted.length){ box.hidden = true; $("games-notes").innerHTML = ""; return; }
-  box.hidden = false;
+  const counted = games.filter(g => g.counts);
+
+  if(!counted.length){
+    $("out").hidden = true; $("lastround").hidden = true; $("games-notes").innerHTML = "";
+    return;
+  }
 
   const mg = minGames(games, rounds), t = TITLES[title];
   const excluded = games.filter(g => !g.counts);
 
+  /* --- notes about excluded games --- */
   let notes = "";
   if(excluded.length){
     const kinds = [...new Set(excluded.map(e => e.kind))].join(", ");
@@ -348,7 +447,7 @@ function compute(){
       excluded under 1.4.2c (${esc(kinds)}). Unplayed games count towards neither your score
       nor your opponent average.</div>`;
   }
-  if(rounds === 9 && counted.length === 8){
+  if(rounds === 9 && counted.length === 8 && excluded.length){
     notes += mg.relief
       ? `<div class="note plain">1.4.1c applies: 8 games count as a 9-game norm here, because
          the missing game is a forfeit win or a pairing-allocated bye.</div>`
@@ -359,19 +458,15 @@ function compute(){
   }
   $("games-notes").innerHTML = notes;
 
-  const now = perf(games, title);
-  const html = [];
+  /* --- last round --- */
+  const hasLastRound = counted.length < rounds;
+  $("lastround").hidden = !hasLastRound;
 
-  if(counted.length < rounds){
-    const opp = $("opp") ? $("opp").value : "";
-    html.push(`<h2>Last round</h2>
-      <div style="margin-bottom:.9rem">
-        <label for="opp">Opponent's rating, if the pairing is out</label>
-        <input id="opp" type="number" inputmode="numeric" placeholder="leave blank if unknown"
-          value="${esc(opp)}" style="max-width:14rem"></div>`);
-
+  if(hasLastRound){
+    const opp = $("opp").value;
     const oppVal = opp === "" ? null : Number(opp);
-    const rungs = [[1,"Win"],[0.5,"Draw"],[0,"Loss"]].map(([r,lab]) => {
+
+    $("ladder").innerHTML = [[1,"Win"],[0.5,"Draw"],[0,"Loss"]].map(([r,lab]) => {
       if(opp !== ""){
         const p = perf([...games,{rating:oppVal,result:r,counts:true}], title);
         const why = p.ok ? `${title} performance`
@@ -386,14 +481,17 @@ function compute(){
       return `<div class="rung ${need!==null?"hit":""}"><span class="res">${lab}</span>
         <span class="rp" style="min-width:0"></span><span class="verdict">${txt}</span></div>`;
     }).join("");
-    html.push(`<div class="ladder">${rungs}</div>`);
-    if(opp === "") html.push(`<div class="note plain">An opponent below ${t.floor} counts as
-      ${t.floor} under the adjusted rating floor, so past that point a weaker opponent costs
-      you nothing.</div>`);
+    $("ladder").className = "ladder";
+
+    $("ladder-note").innerHTML = opp === ""
+      ? `<div class="note plain">An opponent below ${t.floor} counts as ${t.floor} under the
+         adjusted rating floor, so past that point a weaker opponent costs you nothing.</div>`
+      : "";
   }
 
-  html.push(`<h2 style="margin-top:${counted.length < rounds ? "1.6rem" : "0"}">
-    After ${counted.length} game${counted.length>1?"s":""}</h2>
+  /* --- where you stand --- */
+  const now = perf(games, title);
+  const html = [`<h2>After ${counted.length} game${counted.length>1?"s":""}</h2>
     <div class="ladder"><div class="rung ${now.ok?"hit":""}">
       <span class="res">Now</span><span class="rp">${now.rp}</span>
       <span class="verdict">${now.ok ? title+" performance" : "target "+t.threshold}</span>
@@ -403,7 +501,7 @@ function compute(){
       <span class="chk ${now.meetsRa?"ok":"bad"}">Opponent average ${now.ra} / ${t.minRa}</span>
       <span class="chk ${now.meetsScore?"ok":"bad"}">Score ${now.p}% / 35%</span>
       ${counted.length >= mg.min ? "" : `<span class="chk bad">${counted.length} of ${mg.min} games</span>`}
-    </div>`);
+    </div>`];
 
   const raised = now.adj.raisedIndex !== null;
   const bump = raised ? t.floor - now.adj.raisedFrom : 0;
@@ -426,7 +524,7 @@ function compute(){
       .sort((a,b) => b.indices.length - a.indices.length || b.perf.rp - a.perf.rp);
     if(opts.length){
       const best = opts[0];
-      const dropped = best.dropped.map(i => "round " + (i+1)).join(", ");
+      const dropped = best.dropped.map(i => "round " + (games[i].round ?? i+1)).join(", ");
       html.push(`<div class="note warn" style="margin-top:1rem"><b>All ${counted.length} games
         fall short, but a permitted subset does not.</b> Leaving out ${esc(dropped)} gives
         ${best.perf.rp} over ${best.indices.length} games.
@@ -436,12 +534,13 @@ function compute(){
     }
   }
 
-  box.innerHTML = html.join("");
-  const o = $("opp");
-  if(o) o.addEventListener("input", compute);
+  $("out").hidden = false;
+  $("out").innerHTML = html.join("");
 }
 
-/* ---------- events ---------- */
+/* =========================================================================
+   Events
+   ========================================================================= */
 
 const switchTab = paste => {
   $("tab-paste").setAttribute("aria-selected", paste);
@@ -452,28 +551,47 @@ $("tab-paste").onclick = () => switchTab(true);
 $("tab-manual").onclick = () => switchTab(false);
 
 $("do-parse").onclick = () => {
-  const {games:g, skipped} = parseCard($("paste").value);
+  const {games:g, skipped, pending, rounds} = parseCard($("paste").value);
   const msg = $("parse-msg");
-  if(!g.length){
-    msg.innerHTML = `<div class="note warn">No games found. Each line needs an opponent rating
-      and a result (1, 0 or ½). Check you copied the game rows rather than the player summary,
-      or enter the games by hand.</div>`;
+
+  if(!g.length && !pending.length){
+    msg.innerHTML = `<div class="note warn">No games found. Select the whole game table on
+      your player card, including the round numbers, and paste it again — or enter the games
+      by hand.</div>`;
     return;
   }
+
   games = g;
-  msg.innerHTML = `<div class="note plain">Read ${g.length} round${g.length>1?"s":""}.
-    ${skipped.length ? `${skipped.length} line${skipped.length>1?"s":""} skipped. ` : ""}
-    Check every row below against your card before trusting the result.</div>`;
+  if(rounds >= 1 && rounds <= 19) $("rounds").value = rounds;
+
+  /* A round with no result yet is the round still to be played. Prefill it
+     rather than counting it as anything. */
+  $("opp").value = "";
+  $("opp-name").textContent = "";
+  if(pending.length){
+    const last = pending[pending.length - 1];
+    if(last.rating !== null) $("opp").value = last.rating;
+    $("opp-name").textContent = last.name
+      ? `Round ${last.round}: ${last.name}, from your card` : `Round ${last.round}, from your card`;
+  }
+
+  const bits = [`Read ${g.length} completed round${g.length===1?"":"s"}.`];
+  if(pending.length) bits.push(`Round ${pending[pending.length-1].round} has no result yet and is
+    treated as the round still to come.`);
+  if(skipped.length) bits.push(`${skipped.length} line${skipped.length===1?"":"s"} skipped.`);
+  msg.innerHTML = `<div class="note plain">${bits.join(" ")}</div>`;
+
   renderGames();
 };
 
 $("do-clear").onclick = () => {
   games = []; $("paste").value = ""; $("parse-msg").innerHTML = "";
-  $("games-section").hidden = true; $("out").hidden = true;
+  $("opp").value = ""; $("opp-name").textContent = "";
+  $("games-section").hidden = true; $("out").hidden = true; $("lastround").hidden = true;
 };
 
 $("add-row").onclick = () => {
-  games.push({rating:2300, result:.5, counts:true, kind:"played"});
+  games.push({round:games.length+1, rating:2300, result:.5, counts:true, kind:"played", name:""});
   renderGames();
 };
 
@@ -487,18 +605,9 @@ $("games").addEventListener("input", e => {
 });
 
 $("games").addEventListener("change", e => {
-  const el = e.target, i = Number(el.dataset.i);
+  const i = Number(e.target.dataset.i);
   if(Number.isNaN(i)) return;
-  if(el.dataset.f === "result"){ games[i].result = Number(el.value); compute(); }
-  if(el.dataset.f === "kind"){
-    const k = el.value;
-    games[i].kind = k;
-    games[i].counts = k === "played";
-    if(k === "forfeit-win" || k === "pab") games[i].result = 1;
-    if(k === "forfeit-loss") games[i].result = 0;
-    if(k === "requested-bye") games[i].result = .5;
-    renderGames();
-  }
+  if(e.target.dataset.f === "value"){ applyValue(games[i], e.target.value); renderGames(); }
 });
 
 $("games").addEventListener("click", e => {
@@ -506,6 +615,7 @@ $("games").addEventListener("click", e => {
   if(d !== undefined){ games.splice(Number(d), 1); renderGames(); }
 });
 
+$("opp").addEventListener("input", compute);
 $("title").onchange = compute;
 $("rounds").oninput = compute;
 </script>
