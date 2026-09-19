@@ -16,8 +16,8 @@
   <div class="wrap">
     <a class="mark" href="index.html">last<span>round</span></a>
     <nav>
-      <a href="performance-rating-calculator.html" aria-current="page">Norm performance</a>
-      <a href="round-1-pairing-calculator.html">Round 1 pairing</a>
+      <a href="performance-rating-calculator.html" aria-current="page"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 13V8M6 13V4M10 13V9M14 13V2"/></svg>Norm performance</a>
+      <a href="round-1-pairing-calculator.html"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="3.5" cy="4.5" r="2"/><circle cx="12.5" cy="11.5" r="2"/><path d="M5.5 4.5h3a2 2 0 0 1 2 2v3"/></svg>Round 1 pairing</a>
     </nav>
   </div>
 </header>
@@ -61,14 +61,24 @@
 
     <div id="pane-paste">
 
-      <div class="guide">
-        <p class="guide-h">You can copy the table straight off Chess-Results</p>
+      <label for="paste">Paste your game table from Chess-Results</label>
+      <textarea id="paste" spellcheck="false"
+        placeholder="Paste here. Opponents, ratings and results are read out for you."></textarea>
+      <div class="btnrow">
+        <button id="do-parse">Read my games</button>
+        <button id="do-example" class="ghost">Use sample data</button>
+        <button id="do-clear" class="ghost">Clear</button>
+      </div>
+      <div id="parse-msg"></div>
+
+      <details class="guide">
+        <summary>Where do I copy this from?</summary>
         <ol class="guide-steps">
           <li><b><span class="gn">1</span>Open your player card</b>
             Click your own name anywhere in the standings or a pairing list.</li>
           <li><b><span class="gn">2</span>Select the game table</b>
             Drag from the first round number down to the end of the last row, then copy.</li>
-          <li><b><span class="gn">3</span>Paste it below</b>
+          <li><b><span class="gn">3</span>Paste it above</b>
             Opponents, ratings and results are read out automatically.</li>
         </ol>
         <figure>
@@ -132,17 +142,7 @@
           <figcaption>Each round takes two or three lines, and your result sits alone on the
           second one. Select all of it — the calculator untangles the layout.</figcaption>
         </figure>
-      </div>
-
-      <label for="paste">Paste the table here</label>
-      <textarea id="paste" spellcheck="false"
-        placeholder="1	32	66	FM	Bognar, Csaba Dr.	2044	HUN	0&#10;1&#10;0,84	10	1,60	PGN&#10;2	5	11	FM	Palczert, Matyas	2446	HUN	5&#10;1&#10;0,33	10	6,70	PGN"></textarea>
-      <div class="btnrow">
-        <button id="do-parse">Read my games</button>
-        <button id="do-example" class="ghost">Try it with an example</button>
-        <button id="do-clear" class="ghost">Clear</button>
-      </div>
-      <div id="parse-msg"></div>
+      </details>
     </div>
 
     <div id="pane-manual" hidden>

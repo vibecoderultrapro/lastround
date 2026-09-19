@@ -40,17 +40,30 @@ body{
 .wrap{max-width:43rem;margin:0 auto;padding:0 1.15rem}
 
 /* ---------- masthead ---------- */
-.top{border-bottom:1px solid var(--rule);background:var(--card)}
-.top .wrap{display:flex;align-items:center;gap:1.4rem;
-  padding-top:.8rem;padding-bottom:.8rem;flex-wrap:wrap}
+.top{border-bottom:1px solid var(--rule);background:var(--card);
+  position:sticky;top:0;z-index:20}
+.top .wrap{display:flex;align-items:center;gap:1rem;
+  padding-top:.7rem;padding-bottom:.7rem;flex-wrap:wrap}
 .mark{font-family:"Newsreader",Georgia,serif;font-size:1.22rem;font-weight:500;
-  letter-spacing:-.005em;color:var(--ink);text-decoration:none;line-height:1}
+  letter-spacing:-.005em;color:var(--ink);text-decoration:none;line-height:1;flex:none}
 .mark span{color:var(--ink3);font-style:italic}
-.top nav{display:flex;gap:1.15rem;margin-left:auto}
-.top nav a{color:var(--ink2);text-decoration:none;font-size:.86rem;
-  padding-bottom:2px;border-bottom:2px solid transparent}
-.top nav a:hover{color:var(--ink)}
-.top nav a[aria-current=page]{color:var(--ink);font-weight:500;border-bottom-color:var(--ink)}
+
+/* The two tools are the whole site, so the nav is a real control, not a
+   footnote: bordered pills, filled when you are on that page. */
+.top nav{display:flex;gap:.5rem;margin-left:auto}
+.top nav a{
+  display:inline-flex;align-items:center;gap:.45rem;
+  padding:.44rem .8rem;border-radius:999px;
+  border:1px solid var(--rule);background:#fff;
+  color:var(--ink2);font-size:.85rem;font-weight:500;text-decoration:none;
+  transition:border-color .13s,color .13s,background .13s;
+  white-space:nowrap;
+}
+.top nav a:hover{border-color:var(--ink);color:var(--ink);background:var(--sunk)}
+.top nav a[aria-current=page]{background:var(--ink);border-color:var(--ink);color:#fff}
+.top nav svg{flex:none;width:14px;height:14px;stroke:currentColor;fill:none;
+  stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;opacity:.85}
+.top nav a[aria-current=page] svg{opacity:1}
 
 /* ---------- hero ---------- */
 main{padding:0 0 5rem}
@@ -91,8 +104,14 @@ input:hover,select:hover,textarea:hover{border-color:var(--ink3)}
 input:focus,select:focus,textarea:focus,button:focus-visible,summary:focus-visible,
 a:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
 input:focus,select:focus,textarea:focus{border-color:var(--blue);outline-offset:0}
-textarea{min-height:8.5rem;font-size:.82rem;line-height:1.5;resize:vertical;
-  font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace}
+/* The paste box is the primary action on the page, so it looks like a target. */
+textarea{min-height:10rem;font-size:.82rem;line-height:1.5;resize:vertical;
+  font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  border-style:dashed;border-width:1.5px;background:var(--sunk)}
+textarea:hover{border-color:var(--blue);background:#fff}
+textarea:focus{border-style:solid;background:#fff}
+textarea::placeholder{font-family:"IBM Plex Sans",system-ui,sans-serif;
+  font-size:.88rem;color:var(--ink3)}
 
 button{cursor:pointer;background:var(--ink);color:#fff;border:1px solid var(--ink);
   border-radius:var(--r);padding:.55rem 1rem;font-weight:500;
@@ -114,11 +133,12 @@ button.tiny:hover{color:var(--no);border-color:var(--noln);background:var(--nobg
 .tabs button:hover{background:none;color:var(--ink)}
 .tabs button[aria-selected=true]{color:var(--ink);border-bottom-color:var(--ink);font-weight:600}
 
-/* ---------- the illustrated paste guide ---------- */
-.guide{background:var(--sunk);border:1px solid var(--rule2);border-radius:var(--r);
-  padding:.95rem 1rem 1.05rem;margin-bottom:1rem}
-.guide-h{font-size:.82rem;font-weight:600;margin:0 0 .75rem;color:var(--ink)}
-.guide-steps{display:flex;gap:1.1rem;flex-wrap:wrap;margin:0 0 .9rem;padding:0;list-style:none}
+/* ---------- the paste guide, tucked behind a disclosure ----------
+   The paste box is the job; this only opens when someone asks for it. */
+details.guide{margin-top:1rem;border-top:1px solid var(--rule2);padding-top:.8rem}
+details.guide[open]{padding-bottom:.2rem}
+.guide-steps{display:flex;gap:1.1rem;flex-wrap:wrap;margin:.95rem 0 .9rem;padding:0;
+  list-style:none}
 .guide-steps li{flex:1 1 9rem;min-width:8.5rem;font-size:.81rem;line-height:1.45;
   color:var(--ink2)}
 .guide-steps b{display:block;color:var(--ink);font-weight:600;font-size:.81rem;
@@ -126,18 +146,20 @@ button.tiny:hover{color:var(--no);border-color:var(--noln);background:var(--nobg
 .guide-steps .gn{font-family:"Newsreader",Georgia,serif;color:var(--ink3);
   font-size:.95rem;margin-right:.3rem}
 .guide figure{margin:0;background:#fff;border:1px solid var(--rule2);
-  border-radius:3px;overflow:hidden}
+  border-radius:3px;overflow:hidden;max-width:26rem}
 .guide svg{display:block;width:100%;height:auto}
 .guide figcaption{font-size:.74rem;color:var(--ink3);padding:.45rem .6rem;
   border-top:1px solid var(--rule2);background:#fff}
-/* Only the transform animates — fill-opacity on the rect controls the tint, so
-   a CSS opacity keyframe cannot wash the diagram out. */
-.sweep{animation:sweep 5s cubic-bezier(.4,.05,.2,1) infinite;transform-box:fill-box}
-@keyframes sweep{
-  0%,6%    {transform:scaleY(0)}
-  26%,100% {transform:scaleY(1)}
+
+/* Plays once when the guide is opened — never loops, never nags.
+   Only the transform animates: fill-opacity on the rect carries the tint, so a
+   CSS opacity keyframe cannot wash the diagram out. */
+.sweep{transform-box:fill-box}
+details.guide[open] .sweep{animation:sweep .9s cubic-bezier(.4,.05,.2,1) 1 both}
+@keyframes sweep{ from{transform:scaleY(0)} to{transform:scaleY(1)} }
+@media (prefers-reduced-motion:reduce){
+  details.guide[open] .sweep{animation:none;transform:none}
 }
-@media (prefers-reduced-motion:reduce){.sweep{animation:none;transform:none}}
 
 /* ---------- games table ---------- */
 table{width:100%;border-collapse:collapse;font-size:.875rem}
@@ -241,6 +263,13 @@ details[open] summary::before{content:"–"}
 .foot a{color:var(--ink2)}
 
 /* ---------- responsive ---------- */
+/* On a phone the nav becomes a full-width two-button control under the brand */
+@media (max-width:620px){
+  .top .wrap{gap:.65rem}
+  .top nav{margin-left:0;width:100%;gap:.5rem}
+  .top nav a{flex:1;justify-content:center;padding:.55rem .5rem}
+}
+
 @media (max-width:460px){
   .wrap{padding:0 .9rem}
   .hero{padding:2.3rem 0 1.8rem}
