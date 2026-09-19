@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Norm performance rating calculator — FIDE Title Regulations</title>
+<meta name="description" content="Paste your Chess-Results player card and see your FIDE title performance, plus exactly what a win, draw or loss in the last round would give you.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;450;500;600&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <a class="mark" href="index.html">last<span>round</span></a>
+    <nav>
+      <a href="performance-rating-calculator.html" aria-current="page">Norm performance</a>
+      <a href="round-1-pairing-calculator.html">Round 1 pairing</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <div class="hero">
+    <h1>Norm performance calculator</h1>
+    <p class="lede">Paste your player card from Chess-Results and see where you stand —
+    and <span class="pull">exactly the result you need</span> in the last round.
+    The adjusted rating floor is applied to one opponent only, which is where
+    most calculators go wrong.</p>
+  </div>
+
+  <section>
+    <div class="step"><span class="n">1</span><h2>What are you chasing?</h2></div>
+    <div class="row">
+      <div>
+        <label for="title">Target title</label>
+        <select id="title">
+          <option value="GM">GM — 2600 over 2380</option>
+          <option value="IM" selected>IM — 2450 over 2230</option>
+          <option value="WGM">WGM — 2400 over 2180</option>
+          <option value="WIM">WIM — 2250 over 2030</option>
+        </select>
+      </div>
+      <div>
+        <label for="rounds">Rounds in the event</label>
+        <input id="rounds" type="number" min="1" max="19" value="9" inputmode="numeric">
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="step"><span class="n">2</span><h2>Your games</h2></div>
+
+    <div class="tabs" role="tablist">
+      <button role="tab" id="tab-paste" aria-selected="true">Paste from Chess-Results</button>
+      <button role="tab" id="tab-manual" aria-selected="false">Type them in</button>
+    </div>
+
+    <div id="pane-paste">
+
+      <div class="guide">
+        <p class="guide-h">You can copy the table straight off Chess-Results</p>
+        <ol class="guide-steps">
+          <li><b><span class="gn">1</span>Open your player card</b>
+            Click your own name anywhere in the standings or a pairing list.</li>
+          <li><b><span class="gn">2</span>Select the game table</b>
+            Drag from the first round number down to the end of the last row, then copy.</li>
+          <li><b><span class="gn">3</span>Paste it below</b>
+            Opponents, ratings and results are read out automatically.</li>
+        </ol>
+        <figure>
+          <svg viewBox="0 0 340 148" role="img"
+               aria-label="A Chess-Results player card with the game rows highlighted, showing that each round spans several lines and the result sits on its own line">
+            <rect width="340" height="148" fill="#fff"/>
+
+            <!-- header row, deliberately OUTSIDE the selection -->
+            <rect x="10" y="9" width="320" height="16" fill="#EEF1F5" rx="2"/>
+            <g font-family="IBM Plex Sans, sans-serif" font-size="8" fill="#8A94A2">
+              <text x="15" y="20">Rd.</text><text x="36" y="20">SNo</text>
+              <text x="62" y="20">Name</text><text x="196" y="20">Rtg</text>
+              <text x="228" y="20">FED</text><text x="256" y="20">Pts.</text>
+              <text x="282" y="20">Res.</text><text x="308" y="20">we</text>
+            </g>
+
+            <!-- selection: fill-opacity keeps it a tint whatever CSS animates -->
+            <g class="sweep" style="transform-origin:top">
+              <rect x="10" y="29" width="320" height="105" fill="#1F3A6E"
+                    fill-opacity=".10" rx="2"/>
+              <rect x="10" y="29" width="320" height="105" fill="none"
+                    stroke="#1F3A6E" stroke-opacity=".45" stroke-width="1"
+                    stroke-dasharray="3 2" rx="2"/>
+            </g>
+
+            <g font-family="IBM Plex Sans, sans-serif" font-size="8" fill="#1A2332">
+              <!-- round 1 -->
+              <text x="15" y="41">1</text><text x="36" y="41">66</text>
+              <text x="62" y="41" fill="#56606E">FM</text>
+              <text x="78" y="41">Bognar, Csaba Dr.</text>
+              <text x="196" y="41">2044</text><text x="228" y="41">HUN</text>
+              <text x="256" y="41" fill="#8A94A2">0</text>
+              <text x="15" y="54" fill="#12553A" font-weight="600">1</text>
+              <g fill="#A8B0BB"><text x="15" y="67">0,84</text><text x="42" y="67">10</text>
+                <text x="60" y="67">1,60</text><text x="86" y="67">PGN</text></g>
+              <!-- round 2 -->
+              <text x="15" y="85">2</text><text x="36" y="85">11</text>
+              <text x="62" y="85" fill="#56606E">FM</text>
+              <text x="78" y="85">Palczert, Matyas</text>
+              <text x="196" y="85">2446</text><text x="228" y="85">HUN</text>
+              <text x="256" y="85" fill="#8A94A2">5</text>
+              <text x="15" y="98" fill="#12553A" font-weight="600">1</text>
+              <g fill="#A8B0BB"><text x="15" y="111">0,33</text><text x="42" y="111">10</text>
+                <text x="60" y="111">6,70</text><text x="86" y="111">PGN</text></g>
+              <!-- round 3, trailing off -->
+              <text x="15" y="129">3</text><text x="36" y="129">3</text>
+              <text x="62" y="129" fill="#56606E">IM</text>
+              <text x="78" y="129">Ajay, Santhosh</text>
+              <text x="196" y="129">2477</text><text x="228" y="129">IND</text>
+              <text x="256" y="129" fill="#8A94A2">6</text>
+            </g>
+            <text x="15" y="144" font-family="IBM Plex Sans, sans-serif" font-size="9"
+                  fill="#A8B0BB">…</text>
+
+            <!-- callout: the green digit is the result -->
+            <g font-family="IBM Plex Sans, sans-serif" font-size="7" fill="#12553A">
+              <path d="M24 51 L44 51" stroke="#12553A" stroke-width=".8" fill="none"/>
+              <text x="47" y="53.5">your result, on its own line</text>
+            </g>
+          </svg>
+          <figcaption>Each round takes two or three lines, and your result sits alone on the
+          second one. Select all of it — the calculator untangles the layout.</figcaption>
+        </figure>
+      </div>
+
+      <label for="paste">Paste the table here</label>
+      <textarea id="paste" spellcheck="false"
+        placeholder="1	32	66	FM	Bognar, Csaba Dr.	2044	HUN	0&#10;1&#10;0,84	10	1,60	PGN&#10;2	5	11	FM	Palczert, Matyas	2446	HUN	5&#10;1&#10;0,33	10	6,70	PGN"></textarea>
+      <div class="btnrow">
+        <button id="do-parse">Read my games</button>
+        <button id="do-example" class="ghost">Try it with an example</button>
+        <button id="do-clear" class="ghost">Clear</button>
+      </div>
+      <div id="parse-msg"></div>
+    </div>
+
+    <div id="pane-manual" hidden>
+      <p class="empty" style="margin:0 0 .8rem">One row per round. Leave the rating blank if
+      your opponent was unrated.</p>
+      <button id="add-row" class="ghost">Add a round</button>
+    </div>
+  </section>
+
+  <section id="games-section" hidden>
+    <h2>Check what was read <span class="quiet">— correct anything that looks wrong</span></h2>
+    <table>
+      <thead><tr><th>Rd</th><th>Opponent</th><th>Result</th><th></th></tr></thead>
+      <tbody id="games"></tbody>
+    </table>
+    <div id="games-notes"></div>
+  </section>
+
+  <section id="lastround" hidden>
+    <div class="step"><span class="n">3</span><h2>What the last round needs</h2></div>
+    <div style="margin-bottom:1rem">
+      <label for="opp">Opponent's rating, if the pairing is out</label>
+      <input id="opp" type="number" inputmode="numeric" placeholder="leave blank if unknown"
+        style="max-width:14rem">
+      <div id="opp-name" class="empty" style="font-size:.8rem;margin-top:.35rem"></div>
+    </div>
+    <div id="ladder"></div>
+    <div id="ladder-note"></div>
+  </section>
+
+  <section id="out" hidden></section>
+
+  <div class="prose">
+    <h3>How the performance rating is calculated</h3>
+    <p>The Title Regulations define it in three steps, and the tool above shows each one.</p>
+    <div class="eq">
+      <b>Ra</b> = the opponents' ratings, totalled and divided by the number of opponents,
+      rounded to a whole number with .5 going up<br>
+      <b>dp</b> = the rating difference the regulations assign to your score percentage<br>
+      <b>Rp</b> = Ra + dp
+    </div>
+    <p>Your score is turned into a percentage and <em>rounded to a whole number</em> before
+    the table is consulted. This matters more than it looks. Six out of nine is 66.67%,
+    which rounds to 67% and gives +125. Round it down to 66% instead and you get +117 — an
+    eight point error, which is plenty to lose a norm on.</p>
+
+    <h3>The adjusted rating floor</h3>
+    <p>For norm purposes each title sets a minimum opponent rating: 2200 for GM, 2050 for
+    IM, 2000 for WGM, 1850 for WIM. An opponent rated below it is counted as if they were
+    rated at the floor.</p>
+    <p>But only one of them. Article 1.4.6c is explicit that no more than one opponent may
+    be raised, and that where several are below the floor it is the <b>lowest rated</b> one
+    that gets raised. Not the one that would help you most — the lowest. Everyone else
+    counts at their real rating.</p>
+    <p>The practical consequence catches people out. If you have already played someone
+    rated 1800 and your last-round opponent turns out to be unrated, the floor moves to the
+    unrated player and the 1800 reverts to counting as 1800. A calculator that raises both
+    to 2050 will hand you an average roughly 28 points too high across nine games.</p>
+    <p>It also means an opponent below the floor is a cliff rather than a slope. For an IM
+    norm, a 1600 and a 2040 contribute exactly the same to your average, provided they are
+    your lowest. Beyond that point a weaker opponent costs you nothing at all.</p>
+    <p>One weak opponent early can still quietly end a norm hunt. Because the floor is the
+    same for everybody, a single game against a 2050 in a field of 2450s pulls your average
+    down by around forty points over nine rounds, and no later result can undo it.</p>
+
+    <h3>Why this disagrees with Chess-Results</h3>
+    <p>Chess-Results shows a performance rating computed under the FIDE <em>Rating</em>
+    Regulations. Those cap any rating difference above 400 points, and they know nothing
+    about which title you are chasing, so they cannot apply a title's rating floor. Norms
+    are governed by the <em>Title</em> Regulations, which have no 400-point rule and do
+    have the floor.</p>
+    <p>Both numbers are correct for their own purpose. Only one of them is the number your
+    arbiter will put on the certificate. The same set of games produces four different
+    performance ratings depending on the title, and the figure on your player card is none
+    of them.</p>
+
+    <h3>Unplayed games</h3>
+    <p>Games decided by forfeit or by any means other than play at the board are excluded
+    from your score <em>and</em> from your opponent count. So are byes. A nine-round event
+    where you took a bye leaves you with eight games, not nine.</p>
+    <p>There is one narrow rescue: if the shortfall was caused by a forfeit win or a
+    pairing-allocated bye, eight games can count as a nine-game norm. A bye you asked for
+    is neither of those, so it does not qualify, and a norm is not possible in a nine-round
+    event. The tool says so plainly rather than quietly computing over eight games.</p>
+
+    <h3>Ten rounds and longer</h3>
+    <p>You may leave out games you won, and you may leave out games played after the norm
+    was already achieved, provided at least nine games remain and the opponent mix still
+    holds. There is no rule permitting any nine consecutive rounds — a first-round loss
+    cannot be discarded.</p>
+    <p>Dropping a win sounds perverse and occasionally isn't. A win over a weak opponent can
+    drag your opponent average down further than the extra half point lifts your
+    percentage. The tool flags this when the full set falls short and a permitted subset
+    does not.</p>
+
+    <h3>What this does not check</h3>
+    <p>A performance rating is not a norm. Norms also require at least half your opponents
+    to be titled, a minimum of three from the relevant title band, limits on how many share
+    your federation, at least two other federations represented, and a signed arbiter's
+    certificate. None of that is checked here.</p>
+    <p>Nothing on this page will tell you that you have a norm, because nothing on this page
+    is in a position to know.</p>
+  </div>
+
+  <p class="reg">Implements FIDE Title Regulations B.01, effective 1 January 2024, articles
+  1.4.1 to 1.4.9, including the Annex tables for 7 to 13 rounds. Opponent ratings must be
+  those from the rating list in force when the tournament started, which is not always the
+  rating shown on a page fetched months later.</p>
+</main>
+
+<footer class="foot"><div class="wrap">
+  <a href="index.html">Both calculators</a> · Source:
+  <a href="https://handbook.fide.com/chapter/B012024">FIDE Title Regulations B.01</a>
+</div></footer>
+
+<script>
+"use strict";
+
+/* =========================================================================
+   Calculation engine — FIDE Title Regulations B.01 (1 January 2024),
+   articles 1.4.1 and 1.4.6 to 1.4.9.
+   ========================================================================= */
+
+const TITLES = {
+  GM:{floor:2200,threshold:2600,minRa:2380},
+  IM:{floor:2050,threshold:2450,minRa:2230},
+  WGM:{floor:2000,threshold:2400,minRa:2180},
+  WIM:{floor:1850,threshold:2250,minRa:2030}
+};
+const UNRATED = 1400, MIN_SCORE = 0.35, MIN_GAMES = 9;
+
+/* 1.4.9 conversion table, indexed by whole-number percentage 0..100. */
+const DP = [
+ -800,-677,-589,-538,-501,-470,-444,-422,-401,-383,
+ -366,-351,-336,-322,-309,-296,-284,-273,-262,-251,
+ -240,-230,-220,-211,-202,-193,-184,-175,-166,-158,
+ -149,-141,-133,-125,-117,-110,-102, -95, -87, -80,
+  -72, -65, -57, -50, -43, -36, -29, -21, -14,  -7,
+    0,   7,  14,  21,  29,  36,  43,  50,  57,  65,
+   72,  80,  87,  95, 102, 110, 117, 125, 133, 141,
+  149, 158, 166, 175, 184, 193, 202, 211, 220, 230,
+  240, 251, 262, 273, 284, 296, 309, 322, 336, 351,
+  366, 383, 401, 422, 444, 470, 501, 538, 589, 677, 800];
+
+const half = x => Math.floor(x + 0.5);          /* 1.4.7b, 1.4.9: .5 rounds up */
+const pct  = (s,n) => half(s / n * 100);
+
+/* 1.4.6b-d. Deem unrated opponents 1400, then raise AT MOST ONE — the lowest
+   rated — to the title's floor. Mandatory, not an optimisation. */
+function adjust(ratings, floor){
+  const v = ratings.map(r => r === null ? UNRATED : r);
+  if(!v.length) return {values:v,sum:0,raisedIndex:null,raisedFrom:null};
+  let lo = 0;
+  for(let i=1;i<v.length;i++) if(v[i] < v[lo]) lo = i;
+  if(v[lo] >= floor) return {values:v,sum:v.reduce((a,b)=>a+b,0),raisedIndex:null,raisedFrom:null};
+  const from = v[lo]; v[lo] = floor;
+  return {values:v,sum:v.reduce((a,b)=>a+b,0),raisedIndex:lo,raisedFrom:from};
+}
+
+function perf(games, title){
+  const t = TITLES[title], c = games.filter(g => g.counts);
+  if(!c.length) return null;
+  const adj = adjust(c.map(g => g.rating), t.floor);
+  const score = c.reduce((a,g) => a + g.result, 0);
+  const n = c.length;
+  const ra = half(adj.sum / n), p = pct(score, n), dp = DP[p], rp = ra + dp;
+  return {title:t,n,score,p,ra,dp,rp,adj,
+    meetsRp: rp >= t.threshold, meetsRa: ra >= t.minRa,
+    meetsScore: score / n >= MIN_SCORE,
+    ok: rp >= t.threshold && ra >= t.minRa && score / n >= MIN_SCORE};
+}
+
+/* 1.4.1c — a forfeit WIN or a pairing-allocated bye drops the 9-game minimum
+   to 8. A bye the player requested does not. */
+function minGames(games, rounds){
+  const counted = games.filter(g => g.counts).length;
+  if(rounds !== 9 || counted !== 8) return {min:MIN_GAMES, relief:false};
+  const k = games.filter(g => !g.counts).map(g => g.kind);
+  if(k.includes("forfeit-win") || k.includes("pab")) return {min:8, relief:true};
+  return {min:MIN_GAMES, relief:false};
+}
+
+/* Ra is a non-decreasing step function of the next opponent's rating — flat
+   below the floor — so binary search the boundary rather than inverting. */
+function requiredRating(played, title, result){
+  const q = r => { const p = perf([...played,{rating:r,result,counts:true}], title); return p && p.ok; };
+  if(!q(3000)) return null;
+  let lo = 0, hi = 3000;
+  while(lo < hi){ const m = (lo + hi) >> 1; if(q(m)) hi = m; else lo = m + 1; }
+  return lo;
+}
+
+/* 1.4.1e (ignore games played after the result was banked) and 1.4.1f (ignore
+   games against opponents you defeated). Deduplicated by game set. */
+function subsets(games, title, min){
+  const c = games.map((g,i)=>({g,i})).filter(x => x.g.counts);
+  const seen = new Map();
+  const add = (picked, rule) => {
+    if(picked.length < min) return;
+    const idx = picked.map(x => x.i), key = idx.join(",");
+    if(seen.has(key)){ const s = seen.get(key); if(!s.rules.includes(rule)) s.rules.push(rule); return; }
+    seen.set(key, {indices:idx, rules:[rule], perf:perf(picked.map(x=>x.g), title),
+      dropped: games.map((_,i)=>i).filter(i => games[i].counts && !idx.includes(i))});
+  };
+  add(c, "all");
+  for(let k = min; k < c.length; k++){
+    const pre = c.slice(0,k);
+    if(perf(pre.map(x=>x.g), title).ok) add(pre, "1.4.1e");
+  }
+  const wins = c.map((x,i) => x.g.result === 1 ? i : -1).filter(i => i >= 0);
+  const maxDrop = c.length - min;
+  for(let m = 1; m < (1 << wins.length); m++){
+    const drop = new Set();
+    for(let b = 0; b < wins.length; b++) if(m & (1 << b)) drop.add(wins[b]);
+    if(drop.size > maxDrop) continue;
+    add(c.filter((_,i) => !drop.has(i)), "1.4.1f");
+  }
+  return [...seen.values()];
+}
+
+/* =========================================================================
+   Chess-Results player-card parser.
+
+   A record spans MULTIPLE LINES. The Res. column sits on its own line and the
+   rating columns (we / K / rtg+/- / PGN) follow on a third:
+
+     1  32  66  FM  Bognar, Csaba Dr.  2044  HUN  0
+     1
+     0,84  10  1,60  PGN
+
+   So records are framed by round number, then the FED column is used as an
+   anchor to locate Rtg / Pts. / Res. by POSITION. Reading the last token of a
+   line instead picks up the opponent's Pts. and silently inverts results.
+   ========================================================================= */
+
+const NOT_FED = new Set(["GM","IM","FM","CM","NM","WGM","WIM","WFM","WCM","WNM","PGN"]);
+
+const RESULTS = {
+  "1":{r:1,counts:true}, "0":{r:0,counts:true},
+  "½":{r:.5,counts:true}, "0.5":{r:.5,counts:true}, "0,5":{r:.5,counts:true},
+  "+":{r:1,counts:false,kind:"forfeit-win"}, "-":{r:0,counts:false,kind:"forfeit-loss"},
+  "1u":{r:1,counts:false,kind:"forfeit-win"}, "0u":{r:0,counts:false,kind:"forfeit-loss"}
+};
+
+const fields = line =>
+  (line.includes("\t") ? line.split("\t") : line.split(/\s{2,}/))
+    .map(s => s.trim()).filter(Boolean);
+
+function parseCard(text){
+  const records = [];
+  let cur = null;
+  for(const raw of text.replace(/ /g," ").split(/\r?\n/)){
+    if(!raw.trim()) continue;
+    const f = fields(raw);
+    if(!f.length) continue;
+    /* A bye row collapses to very few fields once empty cells are dropped, so
+       it is allowed to start a record on its own; everything else needs the
+       full column set, which keeps we / K / rtg+/- continuation lines out. */
+    const looksLikeBye = /not\s*paired|\bbye\b|spielfrei/i.test(raw);
+    if(/^\d{1,2}$/.test(f[0]) && (f.length >= 4 || looksLikeBye)){
+      cur = {round:Number(f[0]), tokens:f.slice()};
+      records.push(cur);
+    } else if(cur){
+      cur.tokens.push(...f);
+    }
+  }
+
+  const games = [], skipped = [], pending = [];
+
+  for(const rec of records){
+    const joined = rec.tokens.join(" ");
+
+    if(/not\s*paired|\bbye\b|spielfrei/i.test(joined)){
+      const m = joined.match(/(½|0[.,]5|1|0)\s*$/);
+      const v = m ? (m[1] === "½" || /0[.,]5/.test(m[1]) ? .5 : Number(m[1])) : .5;
+      /* A pairing-allocated bye goes to the bottom of the lowest scoregroup,
+         which is not where a norm chaser sits, so a half point is a requested
+         bye in almost every real case. Editable below either way. */
+      games.push({round:rec.round, rating:null, result:v, counts:false,
+                  kind: v === 1 ? "pab" : "requested-bye", name:"(bye)"});
+      continue;
+    }
+
+    let fed = -1;
+    for(let i = 1; i < rec.tokens.length; i++){
+      const t = rec.tokens[i];
+      if(/^[A-Z]{3}$/.test(t) && !NOT_FED.has(t) && /^\d{1,4}$/.test(rec.tokens[i-1])){
+        fed = i; break;
+      }
+    }
+    if(fed === -1){ skipped.push(joined); continue; }
+
+    const rtg = Number(rec.tokens[fed-1]);
+    const res = RESULTS[String(rec.tokens[fed+2] ?? "").toLowerCase()];
+    const name = rec.tokens.slice(1, fed-1).find(t => /[a-z]/.test(t) && t.length > 3) || "";
+
+    /* No valid result token means the game has not been played. Never guess. */
+    if(!res){ pending.push({round:rec.round, rating:rtg === 0 ? null : rtg, name}); continue; }
+
+    games.push({round:rec.round, rating: rtg === 0 ? null : rtg,
+                result:res.r, counts:res.counts, kind:res.kind || "played", name});
+  }
+
+  const rounds = records.length ? Math.max(...records.map(r => r.round)) : 0;
+  return {games, skipped, pending, rounds};
+}
+
+/* =========================================================================
+   State and rendering
+   ========================================================================= */
+
+let games = [];
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+/* One control per game: result and special kind share a dropdown. */
+const OPTIONS = [
+  ["1","Win"], ["0.5","Draw"], ["0","Loss"],
+  ["requested-bye","Bye (requested)"], ["pab","Bye (allocated)"],
+  ["forfeit-win","Forfeit win"], ["forfeit-loss","Forfeit loss"]
+];
+
+const valueOf = g => g.counts ? String(g.result) : g.kind;
+
+function applyValue(g, v){
+  if(v === "1" || v === "0.5" || v === "0"){
+    g.counts = true; g.kind = "played"; g.result = Number(v);
+  } else {
+    g.counts = false; g.kind = v;
+    if(v === "forfeit-win" || v === "pab") g.result = 1;
+    else if(v === "forfeit-loss") g.result = 0;
+    else g.result = .5;
+    if(v === "requested-bye" || v === "pab") g.rating = null;
+  }
+}
+
+function renderGames(){
+  $("games-section").hidden = games.length === 0;
+  const noOpponent = g => !g.counts && (g.kind === "requested-bye" || g.kind === "pab");
+  $("games").innerHTML = games.map((g,i) => `
+    <tr class="${g.counts ? "" : "excluded"}">
+      <td>${g.round ?? i+1}</td>
+      <td>
+        <input type="number" inputmode="numeric" placeholder="unrated"
+          value="${g.rating ?? ""}" data-f="rating" data-i="${i}"
+          aria-label="Round ${g.round ?? i+1} opponent rating"
+          ${noOpponent(g) ? "disabled" : ""}>
+        ${g.name ? `<div class="oname">${esc(g.name)}</div>` : ""}
+      </td>
+      <td><select data-f="value" data-i="${i}" aria-label="Round ${g.round ?? i+1} result">
+        ${OPTIONS.map(([v,l]) =>
+          `<option value="${v}"${valueOf(g)===v?" selected":""}>${l}</option>`).join("")}
+      </select></td>
+      <td><button class="tiny" data-del="${i}" aria-label="Remove round ${g.round ?? i+1}">×</button></td>
+    </tr>`).join("");
+  compute();
+}
+
+function compute(){
+  const title = $("title").value, rounds = Number($("rounds").value) || 9;
+  const counted = games.filter(g => g.counts);
+
+  if(!counted.length){
+    $("out").hidden = true; $("lastround").hidden = true; $("games-notes").innerHTML = "";
+    return;
+  }
+
+  const mg = minGames(games, rounds), t = TITLES[title];
+  const excluded = games.filter(g => !g.counts);
+
+  /* --- notes about excluded games --- */
+  let notes = "";
+  if(excluded.length){
+    const kinds = [...new Set(excluded.map(e => e.kind))].join(", ");
+    notes += `<div class="note plain">${excluded.length} game${excluded.length>1?"s":""}
+      excluded under 1.4.2c (${esc(kinds)}). Unplayed games count towards neither your score
+      nor your opponent average.</div>`;
+  }
+  if(rounds === 9 && counted.length === 8 && excluded.length){
+    notes += mg.relief
+      ? `<div class="note plain">1.4.1c applies: 8 games count as a 9-game norm here, because
+         the missing game is a forfeit win or a pairing-allocated bye.</div>`
+      : `<div class="note warn"><b>A requested bye leaves you 8 games.</b> 1.4.1c only rescues a
+         shortfall caused by a forfeit win or a pairing-allocated bye, so a norm is not possible
+         in a 9-round event. Change the round type above if the arbiter allocated this bye
+         rather than you requesting it.</div>`;
+  }
+  $("games-notes").innerHTML = notes;
+
+  /* --- last round --- */
+  const hasLastRound = counted.length < rounds;
+  $("lastround").hidden = !hasLastRound;
+
+  if(hasLastRound){
+    const opp = $("opp").value;
+    const oppVal = opp === "" ? null : Number(opp);
+
+    $("ladder").innerHTML = [[1,"Win"],[0.5,"Draw"],[0,"Loss"]].map(([r,lab]) => {
+      if(opp !== ""){
+        const p = perf([...games,{rating:oppVal,result:r,counts:true}], title);
+        const why = p.ok ? `${title} performance`
+          : (p.meetsRp && !p.meetsRa) ? `opponent average ${p.ra}, needs ${t.minRa}`
+          : `short by ${t.threshold - p.rp}`;
+        return `<div class="rung ${p.ok?"hit":""}"><span class="res">${lab}</span>
+          <span class="rp">${p.rp}</span><span class="verdict">${why}</span></div>`;
+      }
+      const need = requiredRating(games, title, r);
+      const txt = need === null ? "not possible at any rating"
+        : need === 0 ? "enough against anyone" : `opponent rated ${need} or above`;
+      return `<div class="rung ${need!==null?"hit":""}"><span class="res">${lab}</span>
+        <span class="rp" style="min-width:0"></span><span class="verdict">${txt}</span></div>`;
+    }).join("");
+    $("ladder").className = "ladder";
+
+    $("ladder-note").innerHTML = opp === ""
+      ? `<div class="note plain">An opponent below ${t.floor} counts as ${t.floor} under the
+         adjusted rating floor, so past that point a weaker opponent costs you nothing.</div>`
+      : "";
+  }
+
+  /* --- where you stand --- */
+  const now = perf(games, title);
+  /* The game-count chip is only meaningful once there is no round left to play —
+     otherwise it just restates that the tournament is still running. */
+  const showCount = !hasLastRound && counted.length < mg.min;
+  const html = [`<h2>Where you stand
+      <span class="quiet">— after ${counted.length} game${counted.length>1?"s":""}</span></h2>
+    <div class="ladder"><div class="rung lead ${now.ok?"hit":""}">
+      <span class="res">Now</span><span class="rp">${now.rp}</span>
+      <span class="verdict">${now.ok ? title+" performance" : "target "+t.threshold}</span>
+    </div></div>
+    <div class="checks">
+      <span class="chk ${now.meetsRp?"ok":"bad"}">Performance ${now.rp} / ${t.threshold}</span>
+      <span class="chk ${now.meetsRa?"ok":"bad"}">Opponent average ${now.ra} / ${t.minRa}</span>
+      <span class="chk ${now.meetsScore?"ok":"bad"}">Score ${now.p}% / 35%</span>
+      ${showCount ? `<span class="chk bad">Only ${counted.length} of ${mg.min} games</span>` : ""}
+    </div>`];
+
+  const raised = now.adj.raisedIndex !== null;
+  const bump = raised ? t.floor - now.adj.raisedFrom : 0;
+  html.push(`<details><summary>Show the calculation</summary><div class="calc">
+    <div><span>Opponents' ratings, totalled</span><span>${now.adj.sum - bump}</span></div>
+    ${raised ? `<div><span>Lowest opponent ${now.adj.raisedFrom} raised to the ${title} floor</span><span>+${bump}</span></div>
+    <div><span>Adjusted total</span><span>${now.adj.sum}</span></div>` : ""}
+    <div><span>Average over ${now.n} opponents (Ra)</span><span>${now.ra}</span></div>
+    <div><span>Score</span><span>${now.score} / ${now.n}</span></div>
+    <div><span>Percentage, rounded</span><span>${now.p}%</span></div>
+    <div><span>Rating difference (dp)</span><span>${now.dp >= 0 ? "+" : ""}${now.dp}</span></div>
+    <div><span>Performance rating</span><span>${now.ra} ${now.dp >= 0 ? "+" : "−"} ${Math.abs(now.dp)} = ${now.rp}</span></div>
+  </div>${raised ? `<div class="note plain">Only <b>one</b> opponent may be raised to the floor,
+    and it must be the lowest rated. Raising every opponent below ${t.floor} is the commonest
+    error in norm calculators, and it inflates the result.</div>` : ""}</details>`);
+
+  if(counted.length > mg.min && !now.ok){
+    const opts = subsets(games, title, mg.min)
+      .filter(s => s.perf.ok && s.rules.some(r => r !== "all"))
+      .sort((a,b) => b.indices.length - a.indices.length || b.perf.rp - a.perf.rp);
+    if(opts.length){
+      const best = opts[0];
+      const dropped = best.dropped.map(i => "round " + (games[i].round ?? i+1)).join(", ");
+      html.push(`<div class="note warn" style="margin-top:1rem"><b>All ${counted.length} games
+        fall short, but a permitted subset does not.</b> Leaving out ${esc(dropped)} gives
+        ${best.perf.rp} over ${best.indices.length} games.
+        ${best.rules.includes("1.4.1f") ? "1.4.1f lets you ignore games against opponents you defeated. " : ""}
+        ${best.rules.includes("1.4.1e") ? "1.4.1e lets you ignore games played after the result was achieved. " : ""}
+        Both still require the opponent mix to be met, which this tool does not check.</div>`);
+    }
+  }
+
+  $("out").hidden = false;
+  $("out").innerHTML = html.join("");
+}
+
+/* =========================================================================
+   Events
+   ========================================================================= */
+
+const switchTab = paste => {
+  $("tab-paste").setAttribute("aria-selected", paste);
+  $("tab-manual").setAttribute("aria-selected", !paste);
+  $("pane-paste").hidden = !paste; $("pane-manual").hidden = paste;
+};
+$("tab-paste").onclick = () => switchTab(true);
+$("tab-manual").onclick = () => switchTab(false);
+
+function loadPaste(){
+  const {games:g, skipped, pending, rounds} = parseCard($("paste").value);
+  const msg = $("parse-msg");
+
+  if(!g.length && !pending.length){
+    msg.innerHTML = `<div class="note warn"><b>Nothing readable in that paste.</b>
+      Select the whole game table on your player card, starting at the first round number,
+      and copy it again. If it still will not read, switch to <b>Type them in</b> above.</div>`;
+    return;
+  }
+
+  games = g;
+  if(rounds >= 1 && rounds <= 19) $("rounds").value = rounds;
+
+  /* A round with no result yet is the round still to be played. Prefill it
+     rather than counting it as anything. */
+  $("opp").value = "";
+  $("opp-name").textContent = "";
+  if(pending.length){
+    const last = pending[pending.length - 1];
+    if(last.rating !== null) $("opp").value = last.rating;
+    $("opp-name").textContent = last.name
+      ? `Round ${last.round}: ${last.name}, taken from your card`
+      : `Round ${last.round}, taken from your card`;
+  }
+
+  const bits = [`Read ${g.length} completed round${g.length===1?"":"s"}.`];
+  if(pending.length) bits.push(`Round ${pending[pending.length-1].round} has no result yet, so it
+    is treated as the round still to come.`);
+  if(skipped.length) bits.push(`${skipped.length} line${skipped.length===1?"":"s"} skipped.`);
+  msg.innerHTML = `<div class="note plain">${bits.join(" ")}</div>`;
+
+  renderGames();
+  $("games-section").scrollIntoView({behavior:"smooth", block:"start"});
+}
+
+$("do-parse").onclick = loadPaste;
+
+const EXAMPLE = [
+  "1\t32\t66\tFM\tBognar, Csaba Dr.\t2044\tHUN\t0\t", "1", "0,84\t10\t1,60\tPGN",
+  "2\t5\t11\tFM\tPalczert, Matyas\t2446\tHUN\t5\t", "1", "0,33\t10\t6,70\tPGN",
+  "3\t2\t3\tIM\tAjay, Santhosh Parvathareddy\t2477\tIND\t6\t", "½", "0,29\t10\t2,10\tPGN",
+  "4\t5\t17\tGM\tGretarsson, Helgi Ass\t2420\tISL\t3,5\t", "1", "0,37\t10\t6,30\tPGN",
+  "5\t1\t2\tIM\tMd, Imran\t2492\tIND\t5,5\t", "½", "0,28\t10\t2,20\tPGN",
+  "6\t2\t13\tIM\tApoorv, Kamble\t2435\tIND\t5,5\t", "0", "0,35\t10\t-3,50\tPGN",
+  "7\t6\t16\tIM\tGschnitzer, Adrian\t2421\tGER\t4,5\t", "1", "0,37\t10\t6,30\tPGN",
+  "8\t4\t9\tGM\tAczel, Gergely\t2448\tHUN\t5\t", "½", "0,33\t10\t1,70\tPGN",
+  "9\t3\t4\tGM\tSivuk, Vitaly\t2476\tSWE\t5,5\t"
+].join("\n");
+
+$("do-example").onclick = () => {
+  $("paste").value = EXAMPLE;
+  $("title").value = "IM";
+  loadPaste();
+};
+
+$("do-clear").onclick = () => {
+  games = []; $("paste").value = ""; $("parse-msg").innerHTML = "";
+  $("opp").value = ""; $("opp-name").textContent = "";
+  $("games-section").hidden = true; $("out").hidden = true; $("lastround").hidden = true;
+};
+
+$("add-row").onclick = () => {
+  games.push({round:games.length+1, rating:2300, result:.5, counts:true, kind:"played", name:""});
+  renderGames();
+};
+
+$("games").addEventListener("input", e => {
+  const i = Number(e.target.dataset.i);
+  if(Number.isNaN(i)) return;
+  if(e.target.dataset.f === "rating"){
+    games[i].rating = e.target.value === "" ? null : Number(e.target.value);
+    compute();
+  }
+});
+
+$("games").addEventListener("change", e => {
+  const i = Number(e.target.dataset.i);
+  if(Number.isNaN(i)) return;
+  if(e.target.dataset.f === "value"){ applyValue(games[i], e.target.value); renderGames(); }
+});
+
+$("games").addEventListener("click", e => {
+  const d = e.target.dataset.del;
+  if(d !== undefined){ games.splice(Number(d), 1); renderGames(); }
+});
+
+$("opp").addEventListener("input", compute);
+$("title").onchange = compute;
+$("rounds").oninput = compute;
+</script>
+</body>
+</html>
