@@ -239,6 +239,9 @@ details[open] summary::before{content:"–"}
 .reqlist .ok .m{color:var(--yes)}
 .reqlist .bad .m{color:var(--no)}
 .reqlist .unk .m{color:var(--ink3)}
+.reqlist .soon .m{color:var(--blue)}
+.reqlist .soon .what{color:var(--ink)}
+.reqlist .soon .num{color:var(--blue)}
 .reqlist .what{flex:1;color:var(--ink2)}
 .reqlist .ok .what,.reqlist .bad .what{color:var(--ink)}
 .reqlist .qn{color:var(--ink3);font-weight:400}

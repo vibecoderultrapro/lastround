@@ -438,9 +438,10 @@ function requirements(games, title, ownFed, expected){
   for(const f of feds) tally[f] = (tally[f] || 0) + 1;
   const maxOneFed = Object.values(tally).length ? Math.max(...Object.values(tally)) : 0;
   const ownCount = own ? (tally[own] || 0) : null;
-  const otherFeds = own
-    ? new Set(feds.filter(f => f !== own)).size
-    : new Set(feds).size;
+  /* 1.4.2a — players with federation "FID" are accepted, but do not count as a
+     foreign player, so they cannot help satisfy 1.4.3. */
+  const foreign = feds.filter(f => f !== "FID" && f !== own);
+  const otherFeds = new Set(foreign).size;
 
   const haveTitles = opp.some(g => g.title);
   const haveFeds = feds.length > 0;
@@ -633,9 +634,10 @@ function compute(){
   const hasLastRound = counted.length < rounds;
   $("lastround").hidden = !hasLastRound;
 
+  const opp = hasLastRound ? $("opp").value : "";
+  const oppVal = opp === "" ? null : Number(opp);
+
   if(hasLastRound){
-    const opp = $("opp").value;
-    const oppVal = opp === "" ? null : Number(opp);
 
     $("ladder").innerHTML = [[1,"Win"],[0.5,"Draw"],[0,"Loss"]].map(([r,lab]) => {
       if(opp !== ""){
@@ -715,50 +717,71 @@ function compute(){
   /* --- everything a norm needs beyond the performance rating --- */
   const rq = requirements(games, title, $("ownfed").value,
                           Math.min(rounds, 13));
+  const toPlay = Math.max(0, Math.min(rounds, 13) - counted.length);
+
+  /* The best still available, so that "unfinished" is never shown as "failed". */
+  const bestCase = hasLastRound
+    ? perf([...games, {rating: oppVal === null ? 3000 : oppVal, result:1, counts:true}], title)
+    : now;
+
+  const MARK = {ok:"✓", bad:"✕", soon:"○", unk:"?"};
   const rows = [];
-  const row = (pass, what, num) => rows.push(
-    `<li class="${pass === null ? "unk" : pass ? "ok" : "bad"}">
-       <span class="m">${pass === null ? "?" : pass ? "✓" : "✕"}</span>
+  const row = (state, what, num) => rows.push(
+    `<li class="${state}"><span class="m">${MARK[state]}</span>
        <span class="what">${what}</span><span class="num">${num}</span></li>`);
 
-  row(now.meetsRp, `Performance rating`, `${now.rp} / ${t.threshold}`);
-  row(now.meetsRa, `Opponent average`, `${now.ra} / ${t.minRa}`);
-  row(now.meetsScore, `Score at least 35%`, `${now.p}%`);
-  row(counted.length >= mg.min, `Games played`, `${counted.length} / ${mg.min}`);
+  /* A minimum the remaining games could still supply is not a failure. */
+  const minState = (have, need) =>
+    have >= need ? "ok" : (toPlay > 0 && need - have <= toPlay) ? "soon" : "bad";
+  /* Nor is a threshold the last round could still carry you over. */
+  const projState = (nowOk, bestOk) => nowOk ? "ok" : bestOk ? "soon" : "bad";
+
+  row(projState(now.meetsRp, bestCase.meetsRp), `Performance rating`,
+      `${now.rp} / ${t.threshold}`);
+  row(projState(now.meetsRa, bestCase.meetsRa), `Opponent average`,
+      `${now.ra} / ${t.minRa}`);
+  row(projState(now.meetsScore, bestCase.meetsScore), `Score at least 35%`, `${now.p}%`);
+  row(minState(counted.length, mg.min), `Games played`,
+      toPlay > 0 ? `${counted.length} / ${mg.min} · ${toPlay} to play`
+                 : `${counted.length} / ${mg.min}`);
 
   if(rq.haveTitles){
-    row(rq.th >= rq.req.th, `Titled opponents <span class="qn">(not CM/WCM)</span>`,
+    row(minState(rq.th, rq.req.th), `Titled opponents <span class="qn">(not CM/WCM)</span>`,
         `${rq.th} / ${rq.req.th}`);
     const band = {GM:"GMs", IM:"IMs or GMs", WGM:"WGMs, IMs or GMs",
                   WIM:"WIMs, WGMs, IMs or GMs"}[title];
-    row(rq.mo >= rq.req.mo, `Opponents who are ${band}`, `${rq.mo} / ${rq.req.mo}`);
+    row(minState(rq.mo, rq.req.mo), `Opponents who are ${band}`,
+        `${rq.mo} / ${rq.req.mo}`);
   } else {
-    row(null, `Titled opponents`, `paste your card`);
-    row(null, `Opponents in the title band`, `paste your card`);
+    row("unk", `Titled opponents`, `paste your card`);
+    row("unk", `Opponents in the title band`, `paste your card`);
   }
 
   if(rq.req.otherFeds === null){
-    row(null, `Federation limits`, `n/a at ${rq.n} games`);
+    row("unk", `Federation limits`, `n/a at ${rq.n} games`);
   } else if(!rq.haveFeds){
-    row(null, `Federation mix`, `paste your card`);
+    row("unk", `Federation mix`, `paste your card`);
   } else if(!rq.own){
-    row(null, `Federation mix`, `enter your federation`);
+    row("unk", `Federation mix`, `enter your federation`);
   } else {
-    row(rq.otherFeds >= rq.req.otherFeds, `Federations other than ${rq.own}`,
+    row(minState(rq.otherFeds, rq.req.otherFeds),
+        `Federations other than ${rq.own} <span class="qn">(FID excluded)</span>`,
         `${rq.otherFeds} / ${rq.req.otherFeds}`);
-    row(rq.ownCount <= rq.req.maxOwnFed, `Opponents from ${rq.own}`,
+    /* Maximums can only be broken, never rescued, so they are plain pass or fail. */
+    row(rq.ownCount <= rq.req.maxOwnFed ? "ok" : "bad", `Opponents from ${rq.own}`,
         `${rq.ownCount} / max ${rq.req.maxOwnFed}`);
-    row(rq.maxOneFed <= rq.req.maxOneFed, `Most from any one federation`,
+    row(rq.maxOneFed <= rq.req.maxOneFed ? "ok" : "bad", `Most from any one federation`,
         `${rq.maxOneFed} / max ${rq.req.maxOneFed}`);
   }
 
-  const unmet = rows.filter(r => r.includes('class="bad"')).length;
-  const unknown = rows.filter(r => r.includes('class="unk"')).length;
-  const verdict = unmet === 0 && unknown === 0
-    ? `Every condition this tool can check is met.`
-    : unmet === 0
-      ? `Nothing failing, but ${unknown} condition${unknown>1?"s":""} can't be checked from what you have entered.`
-      : `${unmet} condition${unmet>1?"s":""} not met yet.`;
+  const count = c => rows.filter(r => r.includes(`class="${c}"`)).length;
+  const bad = count("bad"), soon = count("soon"), unk = count("unk");
+  const verdict =
+    bad   ? `${bad} condition${bad>1?"s":""} can no longer be met in this event.`
+  : soon  ? `On track. ${soon} condition${soon>1?"s":""} still resting on ${
+              toPlay === 1 ? "the last round" : "the rounds to come"}.`
+  : unk   ? `Nothing failing, but ${unk} can't be checked from what you have entered.`
+  :         `Every condition this tool can check is met.`;
 
   $("reqs").hidden = false;
   const basis = rq.played < rq.n
@@ -823,37 +846,38 @@ function loadPaste(){
 $("do-parse").onclick = loadPaste;
 
 const EXAMPLE = [
-  "1\t28\t41\tIM\tVarga, Bence\t2420\tHUN\t5,5\t",
+  "1\t4\t4\tIM\tSeemann, Jakub\t2500\tPOL\t8,5\t",
   "1",
-  "0,50\t10\t5,00\tPGN",
-  "2\t9\t6\tGM\tKeller, Jonas\t2455\tGER\t6\t",
+  "0,21\t0,79\t20\t15,80",
+  "2\t22\t32\tIM\tCampos Gomez, Manuel\t2359\tCOL\t5,5\t",
   "0",
-  "0,47\t10\t-4,70\tPGN",
-  "3\t15\t22\tIM\tNair, Rohan\t2380\tIND\t5\t",
-  "½",
-  "0,55\t10\t-0,50\tPGN",
-  "4\t12\t18\tFM\tIyer, Karthik\t2401\tIND\t4,5\t",
+  "0,38\t-0,38\t20\t-7,60",
+  "3\t41\t86\t\tMiron, Iurii\t2074\tMDA\t5\t",
   "1",
-  "0,51\t10\t4,90\tPGN",
-  "5\t21\t55\t\tBalogh, Tamas\t2015\tHUN\t3,5\t",
-  "1",
-  "0,92\t10\t0,80\tPGN",
-  "6\t11\t27\tIM\tPetrovic, Milan\t2390\tSRB\t5\t",
+  "0,76\t0,24\t20\t4,80",
+  "4\t16\t30\tIM\tKhripachenko, Alexander\t2376\tFID\t7\t",
   "½",
-  "0,54\t10\t-0,40\tPGN",
-  "7\t6\t11\tGM\tKovalenko, Yuri\t2440\tUKR\t5,5\t",
+  "0,36\t0,14\t20\t2,80",
+  "5\t19\t31\tIM\tZhakshylykov, Erzhan\t2362\tKGZ\t7\t",
   "0",
-  "0,48\t10\t-4,80\tPGN",
-  "8\t17\t31\tFM\tMenon, Adithya\t2375\tIND\t4,5\t",
+  "0,38\t-0,38\t20\t-7,60",
+  "6\t27\t24\tIM\tChen, Ryo\t2401\tUSA\t6,5\t",
+  "½",
+  "0,33\t0,17\t20\t3,40",
+  "7\t28\t36\tFM\tKejna, Piotr\t2348\tPOL\t6\t",
   "1",
-  "0,56\t10\t4,40\tPGN",
-  "9\t10\t14\tIM\tNavarro, Sergio\t2400\tESP\t5\t"
+  "0,40\t0,60\t20\t12,00",
+  "8\t18\t12\tIM\tVergara Anton, Diego\t2467\tESP\t5\t",
+  "1",
+  "0,25\t0,75\t20\t15,00",
+  "9\t14\t14\tFM\tSukiasyan, Vahe A.\t2446\tARM"
 ].join("\n");
 
 $("do-example").onclick = () => {
   $("paste").value = EXAMPLE;
   $("title").value = "IM";
   $("ownfed").value = "IND";
+  $("rounds").value = 9;
   loadPaste();
 };
 
