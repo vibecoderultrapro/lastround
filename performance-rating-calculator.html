@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;450;500;600&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=15">
+<link rel="stylesheet" href="style.css?v=16">
 </head>
 <body>
 
@@ -281,7 +281,7 @@
   <a href="index.html">Both calculators</a> · Source:
   <a href="https://handbook.fide.com/chapter/B012024">FIDE Title Regulations B.01</a>
 
-  <span class="build">build 2026-09-30 · 15</span>
+  <span class="build">build 2026-09-30 · 16</span>
 </div></footer>
 
 <script>
@@ -1124,24 +1124,12 @@ function showRows(){
   void el.offsetWidth;                 // restart the animation on a re-paste
   el.classList.add("fresh");
 
-  const wide = window.matchMedia("(min-width:1040px)").matches;
+  /* Land on the answer, at either width. Nothing is pinned, so this is simply
+     the top of the results: the required result is the first thing in front of
+     you, and the standing, the requirements and the row check are all one
+     ordinary scroll away from it. */
   const lr = $("lastround");
-
-  /* One column: the answer sits directly above the rows, so land on the
-     answer — it is what you came for. */
-  if(!wide){
-    (lr.hidden ? el : lr).scrollIntoView({behavior:"smooth", block:"start"});
-    return;
-  }
-
-  /* Two columns: do NOT put the row check at the top of the screen. That
-     scrolls the whole results column away and leaves the player staring at a
-     table. Stop with the row check just entering from the bottom, which keeps
-     the last-round answer, the requirements and the paste box all on screen at
-     once and leaves the table to be scrolled into. */
-  const y = window.scrollY + el.getBoundingClientRect().top
-            - window.innerHeight * 0.62;
-  window.scrollTo({top:Math.max(0, y), behavior:"smooth"});
+  (lr.hidden ? el : lr).scrollIntoView({behavior:"smooth", block:"start"});
 }
 
 function loadPaste(){

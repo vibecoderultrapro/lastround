@@ -49,17 +49,9 @@ body{
   .tool{grid-template-columns:minmax(0,1fr) 25rem;gap:1.3rem;align-items:start;
     max-width:none}
   .tool-out section:last-child{margin-bottom:0}
-  /* The whole result column is pinned as one block, not the answer card alone.
-     Pinning just the answer made the panel beneath it slide underneath and get
-     sliced across the middle. Capping the column at the window height keeps
-     the answer, the standing and the requirements together and intact while
-     the row check scrolls beside them. */
-  /* The aside is stretched to the full height of the row and the pinned block
-     sits inside it, so the answer stays put for the whole length of the row
-     check rather than sliding away once the aside's own content runs out. */
-  .tool-out{align-self:stretch}
-  .tool-pin{position:sticky;top:4.6rem;max-height:calc(100vh - 5.6rem);
-    overflow-y:auto;scrollbar-width:thin;padding:2px 3px}
+  /* Nothing is pinned and nothing scrolls on its own. Both columns move
+     together with the page: the answer is what the landing position puts in
+     front of you, and everything else is one ordinary scroll away. */
   .tool-pin section:last-child{margin-bottom:0}
 }
 
