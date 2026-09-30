@@ -35,7 +35,7 @@
   <div class="tool">
   <div class="tool-in">
 
-  <section>
+  <section id="s-title">
     <div class="step"><span class="n">1</span><h2>What are you chasing?</h2></div>
     <div class="row">
       <div>
@@ -59,7 +59,7 @@
     </div>
   </section>
 
-  <section>
+  <section id="s-games">
     <div class="step"><span class="n">2</span><h2>Your games</h2></div>
 
     <div class="tabs" role="tablist">
@@ -164,7 +164,8 @@
   </section>
 
   <section id="games-section" class="verify" hidden>
-    <div class="step"><span class="n">3</span><h2>Check what was read</h2></div>
+    <div class="step"><span class="n tick" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M2.5 8.6l3.6 3.6L13.5 4.4"/></svg></span>
+      <h2>Check what was read</h2></div>
     <p class="verify-hint"><b id="verify-count"></b> Every rating and result below can be
     changed — click one to correct it, and every number updates as you type.</p>
     <table>
@@ -179,7 +180,7 @@
   <aside class="tool-out">
 
   <section id="lastround" hidden>
-    <div class="step"><span class="n">4</span><h2>What the last round needs</h2></div>
+    <div class="step"><span class="n">3</span><h2>What the last round needs</h2></div>
     <div style="margin-bottom:1rem">
       <label for="opp">Opponent's rating, if the pairing is out</label>
       <input id="opp" type="number" inputmode="numeric" placeholder="leave blank if unknown"
@@ -279,7 +280,7 @@
   <a href="index.html">Both calculators</a> · Source:
   <a href="https://handbook.fide.com/chapter/B012024">FIDE Title Regulations B.01</a>
 
-  <span class="build">build 2026-09-30 · 12</span>
+  <span class="build">build 2026-09-30 · 13</span>
 </div></footer>
 
 <script>
@@ -1081,10 +1082,18 @@ $("tab-manual").onclick = () => switchTab(false);
    rather than on the table that appears below it. */
 function showRows(){
   const el = $("games-section");
-  el.scrollIntoView({behavior:"smooth", block:"start"});
   el.classList.remove("fresh");
   void el.offsetWidth;                 // restart the animation on a re-paste
   el.classList.add("fresh");
+
+  /* Two columns: the answer is pinned on the right, so go to the rows and you
+     can see both. One column: the answer sits directly above the rows, so go
+     to the answer — it is what you came for, and the row check is the next
+     thing under it. */
+  const wide = window.matchMedia("(min-width:1040px)").matches;
+  const lr = $("lastround");
+  const target = (!wide && !lr.hidden) ? lr : el;
+  target.scrollIntoView({behavior:"smooth", block:"start"});
 }
 
 function loadPaste(){

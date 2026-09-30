@@ -48,8 +48,33 @@ body{
 @media (min-width:1040px){
   .tool{grid-template-columns:minmax(0,1fr) 25rem;gap:1.3rem;align-items:start;
     max-width:none}
-  .tool-out{position:sticky;top:4.6rem}
   .tool-out section:last-child{margin-bottom:0}
+  /* The aside is stretched to the height of the row so the pinned answer can
+     travel the whole length of a long row check rather than unpinning part
+     way down it. */
+  .tool-out{align-self:stretch}
+  /* The result column is taller than most screens, so making the whole column
+     sticky only pins it once you have already scrolled past the answer. Pin
+     the answer itself instead: it stays on screen while you work down the row
+     check on the left, which is the whole point of two columns. */
+  #lastround{position:sticky;top:4.6rem;z-index:5;background:var(--card);
+    box-shadow:0 1px 2px rgba(26,35,50,.06), 0 16px 30px -18px rgba(26,35,50,.55)}
+}
+
+/* Below that width there is one column, and the answer must not end up buried
+   under an eight-row table. The two column wrappers dissolve so every section
+   becomes a direct grid item, and the order is set explicitly: what you are
+   chasing, your games, what the last round needs, then the row check and the
+   rest of the detail. */
+@media (max-width:1039.98px){
+  .tool-in,.tool-out{display:contents}
+  .tool section{margin-bottom:0}
+  #s-title{order:1}
+  #s-games{order:2}
+  #lastround{order:3}
+  #games-section{order:4}
+  #out{order:5}
+  #reqs{order:6}
 }
 
 /* ---------- masthead ---------- */
@@ -107,7 +132,9 @@ section[id]{scroll-margin-top:6.2rem}
    like the other steps, edged in blue, and it flares once when it appears. */
 .verify{border-color:var(--blue);
   box-shadow:0 0 0 3px rgba(31,58,110,.07), var(--shadow)}
-.verify .step .n{color:var(--blue)}
+.step .n.tick{display:flex;align-items:center;height:1.5rem}
+.step .n.tick svg{width:15px;height:15px;stroke:var(--blue);fill:none;
+  stroke-width:2.3;stroke-linecap:round;stroke-linejoin:round}
 .verify-hint{font-size:.82rem;color:var(--ink2);margin:-.45rem 0 .95rem}
 .verify-hint b{color:var(--ink);font-weight:600}
 @keyframes verifyIn{
