@@ -59,6 +59,11 @@
     <p>With an odd number of players the lowest-ranked player receives the pairing-allocated
     bye, and the remaining even field is split as above. This is why a field of 81 pairs
     identically to a field of 80.</p>
+    <p>One consequence surprises people. If you are in the top half, your board number is
+    simply your own starting number. If you are in the bottom half, your board number is
+    your opponent's starting number. Those are not coincidences in your particular
+    tournament — they fall straight out of pairing the two halves against each other in
+    order, and they hold for every Dutch-paired first round.</p>
 
     <h3>Why nobody can tell you your colour</h3>
     <p>Colours in round one are not derived from the ratings. The colour of the highest
@@ -97,7 +102,7 @@
   <a href="index.html">Both calculators</a> · Source:
   <a href="https://handbook.fide.com/">FIDE Handbook</a>
 
-  <span class="build">build 2026-09-19 · 5</span>
+  <span class="build">build 2026-09-30 · 12</span>
 </div></footer>
 
 <script>
@@ -173,12 +178,9 @@ function render(){
       <div class="rung lead hit">
         <span class="res">You play</span>
         <span class="rp">${r.opponent}</span>
-        <span class="verdict">${r.board}${ord(r.board)} player in the
-          ${r.inS1 ? "bottom" : "top"} half of the startlist</span></div>
-      <div class="rung hit">
-        <span class="res">Board</span>
-        <span class="rp" style="font-size:1.45rem">${r.board}</span>
-        <span class="verdict">of ${r.boards}</span></div>
+        <span class="verdict">the ${r.board}${ord(r.board)} player in the
+          ${r.inS1 ? "bottom" : "top"} half<br>
+          <b>board ${r.board}</b> of ${r.boards}</span></div>
     </div>
     <div class="note plain"><b>Colour depends on the drawing of lots.</b> If the higher-ranked
     player on board 1 is given White, you have ${r.colourIfLotWhite}. If board 1 goes the

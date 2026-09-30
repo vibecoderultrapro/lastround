@@ -39,12 +39,12 @@
     <div class="step"><span class="n">1</span><h2>What are you chasing?</h2></div>
     <div class="row">
       <div>
-        <label for="title">Target title</label>
+        <label for="title">Target norm</label>
         <select id="title">
-          <option value="GM">GM — 2600 over 2380</option>
-          <option value="IM" selected>IM — 2450 over 2230</option>
-          <option value="WGM">WGM — 2400 over 2180</option>
-          <option value="WIM">WIM — 2250 over 2030</option>
+          <option value="GM">GM</option>
+          <option value="IM" selected>IM</option>
+          <option value="WGM">WGM</option>
+          <option value="WIM">WIM</option>
         </select>
       </div>
       <div>
@@ -85,7 +85,9 @@
           <li><b><span class="gn">1</span>Open your player card</b>
             Click your own name anywhere in the standings or a pairing list.</li>
           <li><b><span class="gn">2</span>Select the game table</b>
-            Drag from the first round number down to the end of the last row, then copy.</li>
+            Drag from the grey heading row — <i>Rd. Bo. SNo Name Rtg FED</i> — down to the
+            end of the last row, then copy. Including the headings lets the calculator read
+            the columns by name instead of working them out.</li>
           <li><b><span class="gn">3</span>Paste it above</b>
             Opponents, ratings and results are read out automatically.</li>
         </ol>
@@ -94,7 +96,7 @@
                aria-label="A Chess-Results player card with the game rows highlighted, showing that each round spans several lines and the result sits on its own line">
             <rect width="340" height="148" fill="#fff"/>
 
-            <!-- header row, deliberately OUTSIDE the selection -->
+            <!-- header row, INSIDE the selection: it names the columns -->
             <rect x="10" y="9" width="320" height="16" fill="#EEF1F5" rx="2"/>
             <g font-family="IBM Plex Sans, sans-serif" font-size="8" fill="#8A94A2">
               <text x="15" y="20">Rd.</text><text x="36" y="20">SNo</text>
@@ -105,9 +107,9 @@
 
             <!-- selection: fill-opacity keeps it a tint whatever CSS animates -->
             <g class="sweep" style="transform-origin:top">
-              <rect x="10" y="29" width="320" height="105" fill="#1F3A6E"
+              <rect x="10" y="7" width="320" height="127" fill="#1F3A6E"
                     fill-opacity=".10" rx="2"/>
-              <rect x="10" y="29" width="320" height="105" fill="none"
+              <rect x="10" y="7" width="320" height="127" fill="none"
                     stroke="#1F3A6E" stroke-opacity=".45" stroke-width="1"
                     stroke-dasharray="3 2" rx="2"/>
             </g>
@@ -147,8 +149,9 @@
               <text x="47" y="53.5">your result, on its own line</text>
             </g>
           </svg>
-          <figcaption>Each round takes two or three lines, and your result sits alone on the
-          second one. Select all of it — the calculator untangles the layout.</figcaption>
+          <figcaption>Start at the grey heading row. Each round then takes two or three
+          lines, with your result alone on the second — select all of it, the calculator
+          untangles the layout.</figcaption>
         </figure>
       </details>
     </div>
@@ -160,8 +163,10 @@
     </div>
   </section>
 
-  <section id="games-section" hidden>
-    <h2>Check what was read <span class="quiet">— correct anything that looks wrong</span></h2>
+  <section id="games-section" class="verify" hidden>
+    <div class="step"><span class="n">3</span><h2>Check what was read</h2></div>
+    <p class="verify-hint"><b id="verify-count"></b> Every rating and result below can be
+    changed — click one to correct it, and every number updates as you type.</p>
     <table>
       <thead><tr><th>Rd</th><th>Opponent</th><th>Result</th><th></th></tr></thead>
       <tbody id="games"></tbody>
@@ -174,7 +179,7 @@
   <aside class="tool-out">
 
   <section id="lastround" hidden>
-    <div class="step"><span class="n">3</span><h2>What the last round needs</h2></div>
+    <div class="step"><span class="n">4</span><h2>What the last round needs</h2></div>
     <div style="margin-bottom:1rem">
       <label for="opp">Opponent's rating, if the pairing is out</label>
       <input id="opp" type="number" inputmode="numeric" placeholder="leave blank if unknown"
@@ -274,7 +279,7 @@
   <a href="index.html">Both calculators</a> · Source:
   <a href="https://handbook.fide.com/chapter/B012024">FIDE Title Regulations B.01</a>
 
-  <span class="build">build 2026-09-19 · 5</span>
+  <span class="build">build 2026-09-30 · 12</span>
 </div></footer>
 
 <script>
@@ -467,24 +472,184 @@ function requirements(games, title, ownFed, expected){
    line instead picks up the opponent's Pts. and silently inverts results.
    ========================================================================= */
 
-const TITLE_CODES = new Set(["GM","IM","FM","CM","NM","WGM","WIM","WFM","WCM","WNM"]);
+const TITLE_CODES = new Set([
+  "GM","IM","FM","CM","NM","WGM","WIM","WFM","WCM","WNM",
+  /* Arena titles and common national ones — three capitals that sit exactly
+     where a federation would, so they must be known about. */
+  "AGM","AIM","AFM","ACM","AWGM","AWIM","AWFM","AWCM",
+  "MC","MF","MI","MK","LM","EM","HM","SM","MCF","MFF"
+]);
 const NOT_FED = new Set([...TITLE_CODES, "PGN"]);
 
 const RESULTS = {
   "1":{r:1,counts:true}, "0":{r:0,counts:true},
   "½":{r:.5,counts:true}, "0.5":{r:.5,counts:true}, "0,5":{r:.5,counts:true},
+  "1/2":{r:.5,counts:true}, "½-½":{r:.5,counts:true}, "1/2-1/2":{r:.5,counts:true},
+  "=":{r:.5,counts:true}, "remis":{r:.5,counts:true},
   "+":{r:1,counts:false,kind:"forfeit-win"}, "-":{r:0,counts:false,kind:"forfeit-loss"},
   "1u":{r:1,counts:false,kind:"forfeit-win"}, "0u":{r:0,counts:false,kind:"forfeit-loss"}
 };
 
-const fields = line =>
-  (line.includes("\t") ? line.split("\t") : line.split(/\s{2,}/))
+function fields(line){
+  const out = (line.includes("\t") ? line.split("\t") : line.split(/\s{2,}/))
     .map(s => s.trim()).filter(Boolean);
+  /* Some browsers copy an HTML table with single spaces instead of tabs, which
+     collapses a whole row into one field. Fall back to plain whitespace. */
+  if(out.length < 4 && /\s/.test(line.trim())){
+    const single = line.trim().split(/\s+/);
+    if(single.length >= 4) return single;
+  }
+  return out;
+}
+
+/* ---------------------------------------------------------------------------
+   Header row.
+
+   Chess-Results prints the column names above the games — "Rd. Bo. SNo Name
+   RtgI RtgN FED Club/City Pts. Res. PGN" and its translations — and when they
+   survive the copy they say exactly which columns exist and in what order.
+
+   They are NOT used to index cells directly. An empty cell vanishes from a
+   paste, so column positions drift from row to row and a fixed index would be
+   confidently wrong. What the header is used for is telling the row reader
+   what to expect: how many rating columns there are (so the walk-back stops in
+   the right place), which of them is the international one, which side of the
+   federation the rating sits on, whether a club column stands between the
+   federation and the points, and whether the card carries a result column at
+   all. Every one of those was previously a guess.
+   --------------------------------------------------------------------------- */
+const HEAD = [
+  ["rd",   /^(rd|rnd|round|runde|ronda|ronde|tour|rda)(nr)?$/],
+  ["bo",   /^(bo|bd|board|brett|tisch|mesa|table|tavolo)$/],
+  ["sno",  /^(sno|snr|snum|nr|no|num|n°|nº|startno|startnr|startingrank)$/],
+  ["title",/^(title|titel|ttl|tit|typ|titolo|titulo)$/],
+  ["name", /^(name|nom|nombre|nome|naam|namn|imię|imie|nimi)$/],
+  ["rtgN", /^(rtgn|natrtg|nrtg|elon|natelo|dwz|lms|nationalrating)$/],
+  ["rtgI", /^(rtgi|rtg|rating|elo|eloi|intrtg|internationalrating|fiderating|elofide|wertung)$/],
+  ["fed",  /^(fed|land|federation|federación|federacion|país|pais|fede|kraj|country)$/],
+  ["club", /^(club|city|club\/city|club\/ciudad|verein|ort|verein\/ort|team|equipo|klub)$/],
+  ["pts",  /^(pts|point|points|punkte|pkt|puntos|punti|punkty|score)$/],
+  ["res",  /^(res|result|erg|ergebnis|resultado|risultato|résultat|resultat|uitslag|wynik)$/]
+];
+/* Columns that follow the result and must never be mistaken for one of the
+   above. "rtg+/-" in particular normalises very close to "rtg". */
+const HEAD_IGNORE = /^((rtg|elo)?\+\/[-−–]|w-we|we|k|kf|kr|rp|pgn|chg|change)$/;
+
+const headNorm = s => String(s).toLowerCase().replace(/[\s. ()]/g, "");
+
+/* Returns a layout description, or null when no header row is present. */
+function readHeader(lines){
+  for(const raw of lines){
+    const f = fields(raw);
+    if(f.length < 4) continue;
+    const seen = {};
+    let hits = 0;
+    f.forEach((cell, i) => {
+      const n = headNorm(cell);
+      if(!n || HEAD_IGNORE.test(n)) return;
+      for(const [key, re] of HEAD){
+        if(!re.test(n)) continue;
+        if(seen[key] === undefined){ seen[key] = i; hits++; }
+        return;
+      }
+    });
+    /* A header has to name a rating column and at least three other columns,
+       and must not itself look like a game row. */
+    const hasRtg = seen.rtgI !== undefined || seen.rtgN !== undefined;
+    const looksLikeData = f.some(c => /^\d{3,4}$/.test(c.trim()));
+    if(!hasRtg || hits < 4 || looksLikeData) continue;
+
+    const rI = seen.rtgI, rN = seen.rtgN;
+    const nRtg = (rI !== undefined ? 1 : 0) + (rN !== undefined ? 1 : 0);
+    const firstRtg = Math.min(rI ?? 99, rN ?? 99);
+    return {
+      cols: seen,
+      nRtg,
+      /* Which of two rating columns is the international one. With only one
+         column the question does not arise. */
+      intlIsLeft: nRtg < 2 ? true : rI < rN,
+      hasFed: seen.fed !== undefined,
+      ratingAfterFed: seen.fed !== undefined && firstRtg > seen.fed,
+      clubAfterFed: seen.club !== undefined && seen.fed !== undefined
+                    && seen.club > seen.fed,
+      hasRes: seen.res !== undefined,
+      raw: f.join(" ")
+    };
+  }
+  return null;
+}
+
+/* ---------------------------------------------------------------------------
+   Salvage pass. Runs only when the strict parser found nothing at all.
+
+   It assumes almost no layout: a line beginning with a round number that
+   carries exactly ONE plausible rating, and a result token either at the end
+   of that line or alone on a following line. That covers cards with no
+   federation column, unusual column orders, and non-English column headers.
+
+   Everything it returns is flagged uncertain, because a loose read that looks
+   right is more dangerous than one that admits it is guessing.
+   --------------------------------------------------------------------------- */
+function salvageCard(text){
+  const lines = text.replace(/\u00a0/g, " ").split(/\r?\n/)
+    .map(l => l.trim()).filter(Boolean);
+  const games = [], pending = [];
+  let open = null;
+
+  const close = (res) => {
+    if(!open) return;
+    if(res){
+      games.push({round:open.round, rating:open.rating, result:res.r,
+                  counts:res.counts, kind:res.kind || "played",
+                  name:open.name, title:open.title, fed:open.fed});
+    } else {
+      pending.push({round:open.round, rating:open.rating,
+                    name:open.name, title:open.title, fed:open.fed});
+    }
+    open = null;
+  };
+
+  for(const line of lines){
+    const toks = line.split(/[\t ]+/).filter(Boolean);
+    if(!toks.length) continue;
+
+    /* A bare result token closes the row above it. */
+    const bare = RESULTS[line.toLowerCase()];
+    if(bare && open){ close(bare); continue; }
+
+    if(!/^\d{1,2}$/.test(toks[0])) continue;
+
+    /* Exactly one number in rating range, or the row is too ambiguous to use. */
+    const rats = toks.filter(t => /^\d{3,4}$/.test(t))
+                     .map(Number).filter(n => n >= 1000 && n <= 2900);
+    if(rats.length !== 1) continue;
+
+    close(null);                                  // previous row had no result
+    open = {
+      round: Number(toks[0]),
+      rating: rats[0],
+      title: toks.find(t => TITLE_CODES.has(t)) || "",
+      fed:   toks.find(t => /^[A-Z]{3}$/.test(t) && !NOT_FED.has(t)) || "",
+      name:  toks.filter(t => /[A-Za-z]/.test(t) && !TITLE_CODES.has(t)
+                          && !/^[A-Z]{3}$/.test(t)).join(" ")
+                 .replace(/\s+,/g, ",").trim()
+    };
+    /* The result may be the last cell of the same line. */
+    const tail = RESULTS[toks[toks.length - 1].toLowerCase()];
+    if(tail && toks.length > 2) close(tail);
+  }
+  close(null);
+  const rounds = Math.max(0, ...games.map(g=>g.round), ...pending.map(g=>g.round));
+  return {games, pending, rounds};
+}
 
 function parseCard(text){
+  const lines = text.replace(/ /g," ").split(/\r?\n/);
+  const layout = readHeader(lines);
+
   const records = [];
   let cur = null;
-  for(const raw of text.replace(/ /g," ").split(/\r?\n/)){
+  for(const raw of lines){
     if(!raw.trim()) continue;
     const f = fields(raw);
     if(!f.length) continue;
@@ -500,7 +665,8 @@ function parseCard(text){
     }
   }
 
-  const games = [], skipped = [], pending = [];
+  const games = [], skipped = [], pending = [], unreadable = [];
+  let runTogether = 0;
 
   for(const rec of records){
     const joined = rec.tokens.join(" ");
@@ -516,26 +682,94 @@ function parseCard(text){
       continue;
     }
 
-    let fed = -1;
+    /* The federation cell is three capitals preceded by the player's rating.
+       An unknown three-letter TITLE also sits after a number (the start
+       number), so candidates are ranked: one preceded by a plausible rating
+       beats one preceded by a small start number. Only genuinely ambiguous
+       rows — several rating+federation pairs — are treated as run together. */
+    const isRating = t => /^\d{1,4}$/.test(t) &&
+      (Number(t) === 0 || (Number(t) >= 1000 && Number(t) <= 2999));
+
+    const after1 = layout && layout.ratingAfterFed;
+    const strong = [], weak = [];
     for(let i = 1; i < rec.tokens.length; i++){
       const t = rec.tokens[i];
-      if(/^[A-Z]{3}$/.test(t) && !NOT_FED.has(t) && /^\d{1,4}$/.test(rec.tokens[i-1])){
-        fed = i; break;
-      }
+      if(!/^[A-Z]{3}$/.test(t) || NOT_FED.has(t)) continue;
+      /* The neighbour that should be the rating is on the left in every layout
+         but the ones where the header says the federation comes first. */
+      const nb = after1 ? rec.tokens[i+1] : rec.tokens[i-1];
+      if(isRating(nb)) strong.push(i);
+      else if(/^\d{1,4}$/.test(String(nb ?? ""))) weak.push(i);
     }
+    if(strong.length > 1){ runTogether++; continue; }
+    const fed = strong.length ? strong[0] : (weak.length === 1 ? weak[0] : -1);
     if(fed === -1){ skipped.push(joined); continue; }
 
-    const rtg = Number(rec.tokens[fed-1]);
-    const res = RESULTS[String(rec.tokens[fed+2] ?? "").toLowerCase()];
-    const before = rec.tokens.slice(1, fed-1);
-    const name = before.find(t => /[a-z]/.test(t) && t.length > 3) || "";
+    /* Where the rating sits relative to the federation.
+
+       Without a header: assume it is to the left, and walk back over the run
+       of rating-shaped cells to the leftmost, since a card carrying both an
+       international and a national rating (RtgI | RtgN | FED) prints the
+       international one first.
+
+       With a header: the guessing stops. The number of rating columns bounds
+       the walk-back, so a rating-shaped start number next to the rating can no
+       longer be swallowed; a card that prints the national rating first is
+       read from the right instead; and a layout with the federation before the
+       rating is read forwards. */
+    let rIdx;
+    if(layout && layout.ratingAfterFed){
+      rIdx = fed + 1;
+      while(rIdx < rec.tokens.length && !isRating(rec.tokens[rIdx])) rIdx++;
+      if(rIdx >= rec.tokens.length){ skipped.push(joined); continue; }
+    } else {
+      rIdx = fed - 1;
+      const maxBack = layout ? Math.max(0, layout.nRtg - 1) : 99;
+      let back = 0;
+      while(rIdx > 1 && back < maxBack && isRating(rec.tokens[rIdx - 1])){ rIdx--; back++; }
+      /* Two rating columns with the national one printed first. */
+      if(layout && layout.nRtg === 2 && !layout.intlIsLeft) rIdx = fed - 1;
+    }
+    const rtg = Number(rec.tokens[rIdx]);
+
+    /* Chess-Results decorates some result cells with footnote markers such as
+       "*)" . Strip those before matching, and if the cell is nothing BUT a
+       marker, look at the next cell. */
+    /* A Club/City column can sit between the federation and the points, so
+       skip any text cells: the first numeric cell after the federation is the
+       points, and the result follows it. */
+    let ptsIdx = Math.max(fed, rIdx) + 1;
+    while(ptsIdx < rec.tokens.length && /[A-Za-z]/.test(rec.tokens[ptsIdx])) ptsIdx++;
+    const after = rec.tokens.slice(ptsIdx + 1);
+    const clean = v => String(v ?? "").replace(/[*()\u00a0\s]/g, "").toLowerCase();
+    /* A card with no result column at all must not have its points read as a
+       result \u2014 that is the silent wrong answer this whole parser exists to
+       avoid. The header is the only way to know, so when it says there is no
+       result column every round is left for the user to fill in. */
+    const noResCol = !!layout && !layout.hasRes;
+    let res = (!noResCol && after.length) ? RESULTS[clean(after[0])] : undefined;
+    if(!res && !noResCol && after.length > 1 && clean(after[0]) === "")
+      res = RESULTS[clean(after[1])];
+    const before = rec.tokens.slice(1, layout && layout.ratingAfterFed ? fed : rIdx);
     /* The title cell sits just before the name and is empty for untitled players. */
     const title = before.find(t => TITLE_CODES.has(t)) || "";
+    /* Join every remaining non-numeric cell: with tabs the name is one field,
+       with single spaces it arrives in pieces. */
+    const name = before
+      .filter(t => !TITLE_CODES.has(t) && !/^\d+$/.test(t))
+      .join(" ").replace(/\s+,/g, ",").trim();
     const fedCode = rec.tokens[fed];
 
-    /* No valid result token means the game has not been played. Never guess. */
+    /* Nothing after the points column means the round has not been played.
+       Something there that cannot be read is a DIFFERENT problem, and guessing
+       at it would silently change the score, so it is surfaced instead. */
     if(!res){
-      pending.push({round:rec.round, rating:rtg === 0 ? null : rtg, name, title, fed:fedCode});
+      const entry = {round:rec.round, rating:rtg === 0 ? null : rtg, name, title, fed:fedCode};
+      if(after.length === 0 || noResCol){
+        pending.push(entry);
+      } else {
+        unreadable.push({...entry, raw: after.slice(0, 2).join(" ").trim()});
+      }
       continue;
     }
 
@@ -545,7 +779,28 @@ function parseCard(text){
   }
 
   const rounds = records.length ? Math.max(...records.map(r => r.round)) : 0;
-  return {games, skipped, pending, rounds};
+
+  /* Two things worth telling the user about rather than failing silently.
+     merged  — the copy lost its line breaks, so no row could be framed even
+               though the text plainly contains rating/federation pairs.
+     partial — rows were framed but fewer came through than the round numbers
+               imply, which means something was dropped. */
+  const looksLikeCard = /\d{3,4}\s*[A-Z]{3}\b/.test(text);
+  const read = games.length + pending.length + unreadable.length;
+  const merged  = runTogether > 0 || (read === 0 && looksLikeCard);
+  const partial = rounds > 0 && read < rounds;
+
+  if(read === 0 && !merged){
+    const sv = salvageCard(text);
+    if(sv.games.length){
+      return {games:sv.games, skipped:[], pending:sv.pending, unreadable:[],
+              rounds:sv.rounds, merged:false, partial:false,
+              read:sv.games.length + sv.pending.length, salvaged:true, layout};
+    }
+  }
+
+  return {games, skipped, pending, unreadable, rounds, merged, partial, read,
+          salvaged:false, layout};
 }
 
 /* =========================================================================
@@ -558,6 +813,7 @@ const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":
 
 /* One control per game: result and special kind share a dropdown. */
 const OPTIONS = [
+  ["unknown","Result not read — pick one"],
   ["1","Win"], ["0.5","Draw"], ["0","Loss"],
   ["requested-bye","Bye (requested)"], ["pab","Bye (allocated)"],
   ["forfeit-win","Forfeit win"], ["forfeit-loss","Forfeit loss"]
@@ -570,7 +826,8 @@ function applyValue(g, v){
     g.counts = true; g.kind = "played"; g.result = Number(v);
   } else {
     g.counts = false; g.kind = v;
-    if(v === "forfeit-win" || v === "pab") g.result = 1;
+    if(v === "unknown") g.result = .5;
+    else if(v === "forfeit-win" || v === "pab") g.result = 1;
     else if(v === "forfeit-loss") g.result = 0;
     else g.result = .5;
     if(v === "requested-bye" || v === "pab") g.rating = null;
@@ -579,6 +836,8 @@ function applyValue(g, v){
 
 function renderGames(){
   $("games-section").hidden = games.length === 0;
+  $("verify-count").textContent = games.length
+    ? `${games.length} round${games.length === 1 ? "" : "s"}.` : "";
   const noOpponent = g => !g.counts && (g.kind === "requested-bye" || g.kind === "pab");
   $("games").innerHTML = games.map((g,i) => `
     <tr class="${g.counts ? "" : "excluded"}">
@@ -615,9 +874,17 @@ function compute(){
 
   /* --- notes about excluded games --- */
   let notes = "";
-  if(excluded.length){
-    const kinds = [...new Set(excluded.map(e => e.kind))].join(", ");
-    notes += `<div class="note plain">${excluded.length} game${excluded.length>1?"s":""}
+  const unknown = excluded.filter(e => e.kind === "unknown");
+  const realExcl = excluded.filter(e => e.kind !== "unknown");
+  if(unknown.length){
+    notes += `<div class="note warn"><b>${unknown.length} round${unknown.length>1?"s":""}
+      still ${unknown.length>1?"have":"has"} no result set</b>, so ${unknown.length>1?"they are":"it is"}
+      left out of every figure here. Set ${unknown.length>1?"them":"it"} in the Result column
+      above.</div>`;
+  }
+  if(realExcl.length){
+    const kinds = [...new Set(realExcl.map(e => e.kind))].join(", ");
+    notes += `<div class="note plain">${realExcl.length} game${realExcl.length>1?"s":""}
       excluded under 1.4.2c (${esc(kinds)}). Unplayed games count towards neither your score
       nor your opponent average.</div>`;
   }
@@ -809,40 +1076,105 @@ const switchTab = paste => {
 $("tab-paste").onclick = () => switchTab(true);
 $("tab-manual").onclick = () => switchTab(false);
 
+/* Take the player to the rows and make them unmistakable. The section keeps
+   clear of the sticky masthead by CSS, and flares once so the eye lands on it
+   rather than on the table that appears below it. */
+function showRows(){
+  const el = $("games-section");
+  el.scrollIntoView({behavior:"smooth", block:"start"});
+  el.classList.remove("fresh");
+  void el.offsetWidth;                 // restart the animation on a re-paste
+  el.classList.add("fresh");
+}
+
 function loadPaste(){
-  const {games:g, skipped, pending, rounds} = parseCard($("paste").value);
+  const parsed = parseCard($("paste").value);
+  const {games:g, skipped, pending, rounds} = parsed;
   const msg = $("parse-msg");
 
   if(!g.length && !pending.length){
-    msg.innerHTML = `<div class="note warn"><b>Nothing readable in that paste.</b>
-      Select the whole game table on your player card, starting at the first round number,
-      and copy it again. If it still will not read, switch to <b>Type them in</b> above.</div>`;
+    msg.innerHTML = parsed.merged
+      ? `<div class="note warn"><b>The line breaks were lost in that copy.</b>
+         Your games are in there, but every round ran together into one line, so they
+         cannot be told apart. Try copying from the player card again, or use
+         <b>Type them in</b> above.</div>`
+      : `<div class="note warn"><b>Nothing readable in that paste.</b>
+         Select the whole game table on your player card, starting at the grey heading
+         row above the first round, and copy it again. If it still will not read, switch to
+         <b>Type them in</b> above.</div>`;
     return;
   }
 
-  games = g;
+  /* Only the last unfinished round is the round still to come. Any earlier
+     round with no result is a row that has to be filled in, not one that can
+     be quietly dropped. */
+  const upcoming = pending.length ? pending[pending.length - 1] : null;
+  const blanks = pending.slice(0, -1);
+  const unknownRow = u => ({round:u.round, rating:u.rating, result:.5,
+    counts:false, kind:"unknown", name:u.name, title:u.title, fed:u.fed});
+
+  games = [...g, ...(parsed.unreadable || []).map(unknownRow),
+           ...blanks.map(unknownRow)].sort((a,b) => (a.round ?? 0) - (b.round ?? 0));
   if(rounds >= 1 && rounds <= 19) $("rounds").value = rounds;
 
   /* A round with no result yet is the round still to be played. Prefill it
      rather than counting it as anything. */
   $("opp").value = "";
   $("opp-name").textContent = "";
-  if(pending.length){
-    const last = pending[pending.length - 1];
-    if(last.rating !== null) $("opp").value = last.rating;
-    $("opp-name").textContent = last.name
-      ? `Round ${last.round}: ${last.name}, taken from your card`
-      : `Round ${last.round}, taken from your card`;
+  if(upcoming){
+    if(upcoming.rating !== null) $("opp").value = upcoming.rating;
+    $("opp-name").textContent = upcoming.name
+      ? `Round ${upcoming.round}: ${upcoming.name}, taken from your card`
+      : `Round ${upcoming.round}, taken from your card`;
   }
 
   const bits = [`Read ${g.length} completed round${g.length===1?"":"s"}.`];
-  if(pending.length) bits.push(`Round ${pending[pending.length-1].round} has no result yet, so it
+  if(parsed.layout) bits.push(`Your card's column headings came through, so the rating
+    and result columns were read by name rather than by position.`);
+  if(upcoming) bits.push(`Round ${upcoming.round} has no result yet, so it
     is treated as the round still to come.`);
   if(skipped.length) bits.push(`${skipped.length} line${skipped.length===1?"":"s"} skipped.`);
-  msg.innerHTML = `<div class="note plain">${bits.join(" ")}</div>`;
+
+  if(blanks.length){
+    msg.innerHTML = `<div class="note warn"><b>${blanks.length} earlier round${blanks.length>1
+      ?"s have":" has"} no result on this card.</b> ${bits.join(" ")} Round${blanks.length>1
+      ?"s":""} ${blanks.map(b => b.round).join(", ")}
+      ${blanks.length>1?"are":"is"} left out of every number below until you set
+      ${blanks.length>1?"them":"it"} in the table.</div>`;
+    renderGames();
+    showRows();
+    return;
+  }
+  const un = parsed.unreadable || [];
+  if(un.length){
+    msg.innerHTML = `<div class="note warn"><b>${un.length} result${un.length>1?"s":""}
+      could not be read.</b> ${bits.join(" ")} Round${un.length>1?"s":""}
+      ${un.map(u => u.round).join(", ")} came through as
+      ${un.map(u => `"${esc(u.raw)}"`).join(", ")}, which is not a result this calculator
+      recognises. ${un.length>1?"Those rounds are":"That round is"} left out of every number
+      below until you set ${un.length>1?"them":"it"} in the table.</div>`;
+    renderGames();
+    showRows();
+    return;
+  }
+  if(parsed.salvaged){
+    msg.innerHTML = `<div class="note warn"><b>Read loosely — check every row.</b>
+      This card is not in a layout the calculator recognises, so opponents and results
+      were picked out by pattern rather than by column. ${bits.join(" ")}
+      Check each rating and result against your card before trusting any number, and
+      send me the paste so the layout can be supported properly.</div>`;
+    renderGames();
+    showRows();
+    return;
+  }
+  msg.innerHTML = parsed.partial
+    ? `<div class="note warn"><b>Only ${parsed.read} of ${rounds} rounds came through.</b>
+       ${bits.join(" ")} A missing round changes every number below, so check the list
+       against your card before trusting it.</div>`
+    : `<div class="note plain">${bits.join(" ")}</div>`;
 
   renderGames();
-  $("games-section").scrollIntoView({behavior:"smooth", block:"start"});
+  showRows();
 }
 
 $("do-parse").onclick = loadPaste;

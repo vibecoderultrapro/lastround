@@ -96,6 +96,26 @@ h1{
 section{background:var(--card);border:1px solid var(--rule);border-radius:var(--r);
   padding:1.25rem 1.15rem;margin-bottom:1.1rem;box-shadow:var(--shadow)}
 
+/* The masthead is sticky, so anything scrolled to with block:"start" would sit
+   underneath it. Every section keeps clear of it — with room for the taller,
+   wrapped masthead on a phone. */
+section[id]{scroll-margin-top:6.2rem}
+
+/* ---------- the row check ----------
+   Checking what was read is the one job the calculator cannot do for you, so
+   the section is not allowed to look like a passive report: it is numbered
+   like the other steps, edged in blue, and it flares once when it appears. */
+.verify{border-color:var(--blue);
+  box-shadow:0 0 0 3px rgba(31,58,110,.07), var(--shadow)}
+.verify .step .n{color:var(--blue)}
+.verify-hint{font-size:.82rem;color:var(--ink2);margin:-.45rem 0 .95rem}
+.verify-hint b{color:var(--ink);font-weight:600}
+@keyframes verifyIn{
+  0%  {box-shadow:0 0 0 9px rgba(31,58,110,.20), var(--shadow)}
+  100%{box-shadow:0 0 0 3px rgba(31,58,110,.07), var(--shadow)}
+}
+.verify.fresh{animation:verifyIn 1s ease-out 1}
+
 /* numbered step header — the tool really is a sequence */
 .step{display:flex;align-items:baseline;gap:.65rem;margin:0 0 1rem}
 .step .n{font-family:"Newsreader",Georgia,serif;font-size:1.5rem;line-height:1;
@@ -203,6 +223,7 @@ tr.you td{background:var(--yesbg);font-weight:600;color:var(--ink)}
 .rung.lead{padding:1.15rem 1rem}
 .rung.lead .rp{font-size:2.5rem}
 .ladder.wide .res{width:5.1rem}
+.rung .verdict b{font-weight:600;color:var(--yes)}
 
 .checks{display:flex;flex-wrap:wrap;gap:.4rem;margin-top:.9rem}
 .chk{font-size:.775rem;padding:.24rem .55rem;border-radius:11px;border:1px solid;
