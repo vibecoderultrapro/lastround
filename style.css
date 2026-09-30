@@ -49,16 +49,18 @@ body{
   .tool{grid-template-columns:minmax(0,1fr) 25rem;gap:1.3rem;align-items:start;
     max-width:none}
   .tool-out section:last-child{margin-bottom:0}
-  /* The aside is stretched to the height of the row so the pinned answer can
-     travel the whole length of a long row check rather than unpinning part
-     way down it. */
+  /* The whole result column is pinned as one block, not the answer card alone.
+     Pinning just the answer made the panel beneath it slide underneath and get
+     sliced across the middle. Capping the column at the window height keeps
+     the answer, the standing and the requirements together and intact while
+     the row check scrolls beside them. */
+  /* The aside is stretched to the full height of the row and the pinned block
+     sits inside it, so the answer stays put for the whole length of the row
+     check rather than sliding away once the aside's own content runs out. */
   .tool-out{align-self:stretch}
-  /* The result column is taller than most screens, so making the whole column
-     sticky only pins it once you have already scrolled past the answer. Pin
-     the answer itself instead: it stays on screen while you work down the row
-     check on the left, which is the whole point of two columns. */
-  #lastround{position:sticky;top:4.6rem;z-index:5;background:var(--card);
-    box-shadow:0 1px 2px rgba(26,35,50,.06), 0 16px 30px -18px rgba(26,35,50,.55)}
+  .tool-pin{position:sticky;top:4.6rem;max-height:calc(100vh - 5.6rem);
+    overflow-y:auto;scrollbar-width:thin;padding:2px 3px}
+  .tool-pin section:last-child{margin-bottom:0}
 }
 
 /* Below that width there is one column, and the answer must not end up buried
@@ -67,7 +69,7 @@ body{
    chasing, your games, what the last round needs, then the row check and the
    rest of the detail. */
 @media (max-width:1039.98px){
-  .tool-in,.tool-out{display:contents}
+  .tool-in,.tool-out,.tool-pin{display:contents}
   .tool section{margin-bottom:0}
   #s-title{order:1}
   #s-games{order:2}
@@ -135,7 +137,13 @@ section[id]{scroll-margin-top:6.2rem}
 .step .n.tick{display:flex;align-items:center;height:1.5rem}
 .step .n.tick svg{width:15px;height:15px;stroke:var(--blue);fill:none;
   stroke-width:2.3;stroke-linecap:round;stroke-linejoin:round}
-.verify-hint{font-size:.82rem;color:var(--ink2);margin:-.45rem 0 .95rem}
+/* The answer, restated inside the row check. Loud on purpose: this is the
+   number the player opened the site for. */
+.answer{background:var(--blue-soft);color:var(--ink);border-radius:var(--r);
+  border-left:3px solid var(--blue);
+  padding:.62rem .8rem;margin:0 0 .85rem;font-size:.92rem;line-height:1.45}
+.answer b{font-weight:600}
+.verify-hint{font-size:.82rem;color:var(--ink2);margin:-.2rem 0 .95rem}
 .verify-hint b{color:var(--ink);font-weight:600}
 @keyframes verifyIn{
   0%  {box-shadow:0 0 0 9px rgba(31,58,110,.20), var(--shadow)}

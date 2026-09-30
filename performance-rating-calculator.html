@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;450;500;600&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style.css?v=15">
 </head>
 <body>
 
@@ -166,6 +166,7 @@
   <section id="games-section" class="verify" hidden>
     <div class="step"><span class="n tick" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M2.5 8.6l3.6 3.6L13.5 4.4"/></svg></span>
       <h2>Check what was read</h2></div>
+    <div id="answer-strip" class="answer" hidden></div>
     <p class="verify-hint"><b id="verify-count"></b> Every rating and result below can be
     changed — click one to correct it, and every number updates as you type.</p>
     <table>
@@ -177,7 +178,7 @@
 
   </div>
 
-  <aside class="tool-out">
+  <aside class="tool-out"><div class="tool-pin">
 
   <section id="lastround" hidden>
     <div class="step"><span class="n">3</span><h2>What the last round needs</h2></div>
@@ -195,7 +196,7 @@
 
   <section id="reqs" hidden></section>
 
-  </aside>
+  </div></aside>
   </div>
 
   <div class="prose">
@@ -280,7 +281,7 @@
   <a href="index.html">Both calculators</a> · Source:
   <a href="https://handbook.fide.com/chapter/B012024">FIDE Title Regulations B.01</a>
 
-  <span class="build">build 2026-09-30 · 13</span>
+  <span class="build">build 2026-09-30 · 15</span>
 </div></footer>
 
 <script>
@@ -867,6 +868,7 @@ function compute(){
   if(!counted.length){
     $("out").hidden = true; $("lastround").hidden = true;
     $("reqs").hidden = true; $("games-notes").innerHTML = "";
+    $("answer-strip").hidden = true;
     return;
   }
 
@@ -930,7 +932,43 @@ function compute(){
       ? `<div class="note plain">An opponent below ${t.floor} counts as ${t.floor} under the
          adjusted rating floor, so past that point a weaker opponent costs you nothing.</div>`
       : "";
+
+    /* ---- the answer, in one sentence ----
+       The ladder lives in the results column, which on a laptop is beside the
+       row check and on a phone is above it. Either way the player can end up
+       looking at the table with the number they came for off screen, so the
+       cheapest result that carries the norm is also stated at the top of the
+       row check itself. It is plain text in the same panel: no layout, no
+       stale stylesheet and no scroll position can hide it. */
+    const an = title === "IM" ? "an" : "a";
+    const when = rounds - counted.length === 1 ? `Round ${rounds}` : "Your next game";
+    const STEPS = [[0,"a loss"],[0.5,"a draw"],[1,"a win"]];
+    let strip;
+    if(opp !== ""){
+      const runs = STEPS.map(([r,lab]) =>
+        [lab, perf([...games,{rating:oppVal,result:r,counts:true}], title)]);
+      const won = runs.find(([,p]) => p.ok);
+      strip = !won
+        ? `${when}: even a win gives <b>${runs[2][1].rp}</b>, short of the
+           <b>${t.threshold}</b> ${an} ${title} norm needs.`
+        : won[0] === "a loss"
+          /* Nothing left to do: say so rather than telling someone to lose. */
+          ? `${when}: the ${title} performance holds whatever the result — even a loss
+             leaves you on <b>${won[1].rp}</b>.`
+          : `${when}: <b>${won[0]}</b> gives <b>${won[1].rp}</b> — ${an} ${title} performance.`;
+    } else {
+      const needs = STEPS.map(([r,lab]) => [lab, requiredRating(games, title, r)]);
+      const won = needs.find(([,n]) => n !== null);
+      strip = !won
+        ? `${when}: ${an} ${title} performance is out of reach whatever the result.`
+        : won[1] === 0
+          ? `${when}: <b>${won[0]}</b> is enough against anyone.`
+          : `${when}: <b>${won[0]}</b> is enough against an opponent rated
+             <b>${won[1]}</b> or above.`;
+    }
+    $("answer-strip").innerHTML = strip;
   }
+  $("answer-strip").hidden = !hasLastRound;
 
   /* --- where you stand --- */
   const now = perf(games, title);
@@ -1086,14 +1124,24 @@ function showRows(){
   void el.offsetWidth;                 // restart the animation on a re-paste
   el.classList.add("fresh");
 
-  /* Two columns: the answer is pinned on the right, so go to the rows and you
-     can see both. One column: the answer sits directly above the rows, so go
-     to the answer — it is what you came for, and the row check is the next
-     thing under it. */
   const wide = window.matchMedia("(min-width:1040px)").matches;
   const lr = $("lastround");
-  const target = (!wide && !lr.hidden) ? lr : el;
-  target.scrollIntoView({behavior:"smooth", block:"start"});
+
+  /* One column: the answer sits directly above the rows, so land on the
+     answer — it is what you came for. */
+  if(!wide){
+    (lr.hidden ? el : lr).scrollIntoView({behavior:"smooth", block:"start"});
+    return;
+  }
+
+  /* Two columns: do NOT put the row check at the top of the screen. That
+     scrolls the whole results column away and leaves the player staring at a
+     table. Stop with the row check just entering from the bottom, which keeps
+     the last-round answer, the requirements and the paste box all on screen at
+     once and leaves the table to be scrolled into. */
+  const y = window.scrollY + el.getBoundingClientRect().top
+            - window.innerHeight * 0.62;
+  window.scrollTo({top:Math.max(0, y), behavior:"smooth"});
 }
 
 function loadPaste(){
@@ -1229,6 +1277,7 @@ $("do-clear").onclick = () => {
   $("opp").value = ""; $("opp-name").textContent = "";
   $("games-section").hidden = true; $("out").hidden = true;
   $("lastround").hidden = true; $("reqs").hidden = true;
+  $("answer-strip").hidden = true;
 };
 
 $("add-row").onclick = () => {
